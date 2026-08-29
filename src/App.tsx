@@ -4,6 +4,8 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import DepartmentsPage from './pages/DepartmentsPage';
 import SpecializationsPage from './pages/SpecializationsPage';
+import StaffListPage from './pages/StaffListPage';
+import StaffDetailPage from './pages/StaffDetailPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 
@@ -17,6 +19,8 @@ export const App: React.FC = () => {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/departments" element={<DepartmentsPage />} />
           <Route path="/specializations" element={<SpecializationsPage />} />
+          <Route path="/staff" element={<StaffListPage />} />
+          <Route path="/staff/:id" element={<StaffDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
