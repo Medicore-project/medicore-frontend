@@ -79,4 +79,7 @@ export const staffApi = {
 
   remove: (id: string | number): Promise<void> =>
     apiClient.delete(`/api/staff/${id}`).then(() => undefined),
+
+  assignRole: (staffId: string | number, roleId: string | number): Promise<void> =>
+    apiClient.post(`/api/staff/${staffId}/roles`, { roleId }).then(() => undefined),
 };

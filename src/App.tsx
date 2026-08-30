@@ -17,6 +17,10 @@ export const App: React.FC = () => {
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
+        <Route element={<AppLayout />}>
           <Route path="/departments" element={<DepartmentsPage />} />
           <Route path="/specializations" element={<SpecializationsPage />} />
           <Route path="/staff" element={<StaffListPage />} />
