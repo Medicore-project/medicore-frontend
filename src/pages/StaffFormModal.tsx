@@ -1,5 +1,6 @@
-import React, { useState, type FormEvent } from 'react';
+import React, { useState, useEffect, type FormEvent } from 'react';
 import { staffApi, type CreateStaffBody, type UpdateStaffBody, type StaffResponse } from '../api/staff';
+import apiClient from '../api/client';
 
 const ROLES = ['Admin', 'Doctor', 'Nurse', 'Receptionist', 'Patient'];
 
@@ -46,6 +47,25 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = (props) => {
   );
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
 
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [specializations, setSpecializations] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [deptRes, specRes] = await Promise.all([
+          apiClient.get('/api/departments'),
+          apiClient.get('/api/specializations')
+        ]);
+        setDepartments(deptRes.data);
+        setSpecializations(specRes.data);
+      } catch (err) {
+        console.error('Failed to load options', err);
+      }
+    };
+    fetchData();
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -58,6 +78,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = (props) => {
       if (!email.trim()) errs.email = 'Email is required.';
       if (!password.trim()) errs.password = 'Password is required.';
     }
+    if (!departmentId.trim()) errs.departmentId = 'Department is required.';
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -199,23 +220,30 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = (props) => {
           <div className="form-grid">
             <div className="form-group">
               <label htmlFor="sf-spec">Specialization</label>
-              <input
+              <select
                 id="sf-spec"
-                type="text"
                 value={specialization}
                 onChange={(e) => setSpecialization(e.target.value)}
-                placeholder="e.g. Cardiology"
-              />
+              >
+                <option value="">-- Select Specialization --</option>
+                {specializations.map((s) => (
+                  <option key={s.id} value={s.name}>{s.name}</option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
-              <label htmlFor="sf-dept">Department ID</label>
-              <input
+              <label htmlFor="sf-dept">Department *</label>
+              <select
                 id="sf-dept"
-                type="text"
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
-                placeholder="Department ID"
-              />
+              >
+                <option value="">-- Select Department --</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={String(d.id)}>{d.name}</option>
+                ))}
+              </select>
+              {fieldErrors.departmentId && <span className="field-error">{fieldErrors.departmentId}</span>}
             </div>
           </div>
 
