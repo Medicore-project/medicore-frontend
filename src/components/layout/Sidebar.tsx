@@ -9,7 +9,7 @@ const navItems = [
   { name: 'Patients', path: '/patients' },
   { name: 'Appointments', path: '/appointments' },
   { name: 'Billing', path: '/billing' },
-  { name: 'Reports', path: '/reports' },
+  { name: 'Audit Reports', path: '/reports/audit' },
 ];
 
 export const Sidebar: React.FC = () => {

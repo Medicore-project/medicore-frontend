@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { staffApi, type StaffResponse, type StaffListParams } from '../api/staff';
 import StaffFormModal from './StaffFormModal';
+import RoleAssignmentModal from './RoleAssignmentModal';
 
 const ROLES = ['Admin', 'Doctor', 'Nurse', 'Receptionist', 'Patient'];
 const PAGE_SIZE = 10;
@@ -36,6 +37,7 @@ export const StaffListPage: React.FC = () => {
 
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingStaff, setEditingStaff] = useState<StaffResponse | null>(null);
+  const [assigningRoleStaff, setAssigningRoleStaff] = useState<StaffResponse | null>(null);
 
   const [deactivatingId, setDeactivatingId] = useState<string | number | null>(null);
 
@@ -112,8 +114,24 @@ export const StaffListPage: React.FC = () => {
     setEditingStaff(null);
   };
 
+  const openAssignRole = (staff: StaffResponse) => {
+    setAssigningRoleStaff(staff);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const closeAssignRole = () => {
+    setAssigningRoleStaff(null);
+  };
+
   const onModalSuccess = () => {
     setSuccessMessage(modalMode === 'create' ? 'Staff member added successfully.' : 'Staff member updated.');
+    fetchStaff();
+  };
+
+  const onAssignRoleSuccess = () => {
+    setSuccessMessage('Role assigned successfully.');
+    closeAssignRole();
     fetchStaff();
   };
 
@@ -226,6 +244,13 @@ export const StaffListPage: React.FC = () => {
                         >
                           Edit
                         </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline"
+                          onClick={() => openAssignRole(s)}
+                        >
+                          Assign Role
+                        </button>
                         {s.isActive && (
                           <button
                             type="button"
@@ -286,6 +311,14 @@ export const StaffListPage: React.FC = () => {
           staff={editingStaff}
           onSuccess={onModalSuccess}
           onClose={closeModal}
+        />
+      )}
+
+      {assigningRoleStaff && (
+        <RoleAssignmentModal
+          staff={assigningRoleStaff}
+          onSuccess={onAssignRoleSuccess}
+          onClose={closeAssignRole}
         />
       )}
     </div>
