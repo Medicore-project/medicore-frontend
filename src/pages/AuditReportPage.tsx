@@ -180,9 +180,9 @@ export const AuditReportPage: React.FC = () => {
                         {row.actionType}
                       </span>
                     </td>
-                    <td>{row.resourceName}</td>
-                    <td className="text-muted" style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.details}>
-                      {row.details || '—'}
+                    <td>{row.entityType}</td>
+                    <td className="text-muted" style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.entityId}>
+                      {row.entityId || '—'}
                     </td>
                     <td className="text-muted">{row.ipAddress || '—'}</td>
                   </tr>
