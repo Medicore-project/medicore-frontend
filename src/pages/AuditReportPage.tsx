@@ -21,6 +21,14 @@ const ACTION_TYPES = [
   'AssignRole',
 ];
 
+/** Returns a short readable description of the audit action */
+function formatDetails(row: AuditReportRow): string {
+  const entity = row.entityType ?? '—';
+  const id = row.entityId ? row.entityId.substring(0, 8) + '…' : '';
+  if (!row.entityId) return entity;
+  return `${entity} (${id})`;
+}
+
 export const AuditReportPage: React.FC = () => {
   const [data, setData] = useState<AuditReportRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,7 +66,7 @@ export const AuditReportPage: React.FC = () => {
 
   const chartData = useMemo(() => {
     const countsByDate = data.reduce((acc, row) => {
-      const date = new Date(row.timestamp).toLocaleDateString();
+      const date = new Date(row.occurredAtUtc).toLocaleDateString();
       if (!acc[date]) {
         acc[date] = 0;
       }
@@ -166,29 +174,33 @@ export const AuditReportPage: React.FC = () => {
                 <tr>
                   <th>Timestamp</th>
                   <th>User</th>
+                  <th>Role</th>
                   <th>Action</th>
                   <th>Resource</th>
                   <th>Details</th>
-                  <th>IP Address</th>
                 </tr>
               </thead>
               <tbody>
                 {data.map((row) => (
                   <tr key={row.id}>
                     <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>
-                      {new Date(row.timestamp).toLocaleString()}
+                      {new Date(row.occurredAtUtc).toLocaleString()}
                     </td>
-                    <td className="font-semibold">{row.userName} <span className="text-muted" style={{ fontWeight: 'normal', fontSize: '12px' }}>(#{row.userId})</span></td>
+                    <td className="font-semibold">{row.userEmail}</td>
+                    <td className="text-muted">{row.role}</td>
                     <td>
                       <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#475569' }}>
                         {row.actionType}
                       </span>
                     </td>
-                    <td>{row.resourceName}</td>
-                    <td className="text-muted" style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.details}>
-                      {row.details || '—'}
+                    <td>{row.entityType}</td>
+                    <td
+                      className="text-muted"
+                      style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={`${row.entityType} — ID: ${row.entityId}`}
+                    >
+                      {formatDetails(row)}
                     </td>
-                    <td className="text-muted">{row.ipAddress || '—'}</td>
                   </tr>
                 ))}
               </tbody>
