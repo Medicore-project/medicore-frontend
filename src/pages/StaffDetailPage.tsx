@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { staffApi, type StaffResponse } from '../api/staff';
+import { departmentsApi, type Department } from '../api/departments';
 
 function formatDate(val?: string): string {
   if (!val) return '—';
@@ -39,6 +40,19 @@ export const StaffDetailPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Department lookup map: id -> name
+  const [departmentMap, setDepartmentMap] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    departmentsApi.list().then((depts: Department[]) => {
+      const map = new Map<string, string>();
+      depts.forEach((d) => map.set(String(d.id), d.name));
+      setDepartmentMap(map);
+    }).catch(() => {
+      // silently ignore — department name just won't resolve
+    });
+  }, []);
+
   useEffect(() => {
     if (!id) return;
     setIsLoading(true);
@@ -51,6 +65,11 @@ export const StaffDetailPage: React.FC = () => {
       })
       .finally(() => setIsLoading(false));
   }, [id]);
+
+  const getDepartmentName = (departmentId?: string | number): string => {
+    if (departmentId === undefined || departmentId === null) return '—';
+    return departmentMap.get(String(departmentId)) ?? '—';
+  };
 
   if (isLoading) {
     return (
@@ -112,7 +131,7 @@ export const StaffDetailPage: React.FC = () => {
         <div className="detail-section-title">Employment Details</div>
         <DetailRow label="Role" value={staff.role} />
         <DetailRow label="Specialization" value={staff.specialization ?? '—'} />
-        <DetailRow label="Department ID" value={staff.departmentId ?? '—'} />
+        <DetailRow label="Department" value={getDepartmentName(staff.departmentId)} />
         <DetailRow
           label="Hire Date"
           value={formatDate(staff.hireDate)}

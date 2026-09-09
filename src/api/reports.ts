@@ -15,7 +15,7 @@ export interface AuditReportParams {
   from?: string;
   to?: string;
   actionType?: string;
-  userId?: string | number;
+  userId?: string;
 }
 
 export const reportsApi = {
@@ -24,7 +24,7 @@ export const reportsApi = {
     if (params.from) query.set('from', params.from);
     if (params.to) query.set('to', params.to);
     if (params.actionType) query.set('actionType', params.actionType);
-    if (params.userId) query.set('userId', String(params.userId));
+    if (params.userId) query.set('userId', params.userId);
     return apiClient.get<AuditReportRow[]>(`/api/reports/audit?${query.toString()}`).then((r) => r.data);
   },
 };
