@@ -21,14 +21,6 @@ const ACTION_TYPES = [
   'AssignRole',
 ];
 
-/** Returns a short readable description of the audit action */
-function formatDetails(row: AuditReportRow): string {
-  const entity = row.entityType ?? '—';
-  const id = row.entityId ? row.entityId.substring(0, 8) + '…' : '';
-  if (!row.entityId) return entity;
-  return `${entity} (${id})`;
-}
-
 export const AuditReportPage: React.FC = () => {
   const [data, setData] = useState<AuditReportRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,7 +147,6 @@ export const AuditReportPage: React.FC = () => {
                   <th>Role</th>
                   <th>Action</th>
                   <th>Resource</th>
-                  <th>Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,13 +163,6 @@ export const AuditReportPage: React.FC = () => {
                       </span>
                     </td>
                     <td>{row.entityType}</td>
-                    <td
-                      className="text-muted"
-                      style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      title={`${row.entityType} — ID: ${row.entityId}`}
-                    >
-                      {formatDetails(row)}
-                    </td>
                   </tr>
                 ))}
               </tbody>
