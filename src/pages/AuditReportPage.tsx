@@ -12,13 +12,9 @@ import {
 import { reportsApi, type AuditReportRow, type AuditReportParams } from '../api/reports';
 
 const ACTION_TYPES = [
-  'Login',
-  'Logout',
   'Create',
   'Update',
   'Delete',
-  'View',
-  'AssignRole',
 ];
 
 export const AuditReportPage: React.FC = () => {
