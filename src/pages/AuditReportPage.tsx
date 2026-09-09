@@ -12,13 +12,9 @@ import {
 import { reportsApi, type AuditReportRow, type AuditReportParams } from '../api/reports';
 
 const ACTION_TYPES = [
-  'Login',
-  'Logout',
   'Create',
   'Update',
   'Delete',
-  'View',
-  'AssignRole',
 ];
 
 /** Returns a short readable description of the audit action */
@@ -43,8 +39,8 @@ export const AuditReportPage: React.FC = () => {
     setError(null);
     try {
       const params: AuditReportParams = {};
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
+      if (startDate) params.from = startDate;
+      if (endDate) params.to = endDate;
       if (actionType) params.actionType = actionType;
 
       const result = await reportsApi.getAuditReport(params);
@@ -186,20 +182,15 @@ export const AuditReportPage: React.FC = () => {
                     <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>
                       {new Date(row.occurredAtUtc).toLocaleString()}
                     </td>
-                    <td className="font-semibold">{row.userEmail}</td>
-                    <td className="text-muted">{row.role}</td>
+                    <td className="font-semibold">{row.userEmail} <span className="text-muted" style={{ fontWeight: 'normal', fontSize: '12px' }}>(#{row.userId})</span></td>
                     <td>
                       <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#475569' }}>
                         {row.actionType}
                       </span>
                     </td>
                     <td>{row.entityType}</td>
-                    <td
-                      className="text-muted"
-                      style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      title={`${row.entityType} — ID: ${row.entityId}`}
-                    >
-                      {formatDetails(row)}
+                    <td className="text-muted" style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.entityId}>
+                      {row.entityId || '—'}
                     </td>
                   </tr>
                 ))}
