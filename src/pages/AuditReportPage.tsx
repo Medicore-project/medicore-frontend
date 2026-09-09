@@ -189,9 +189,12 @@ export const AuditReportPage: React.FC = () => {
                       </span>
                     </td>
                     <td>{row.entityType}</td>
-                    <td className="text-muted" style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.entityId}>
-                      {row.entityId || '—'}
+                    <td className="text-muted" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={`${row.entityType} — ID: ${row.entityId}`}
+                      >
+                      {formatDetails(row)}
                     </td>
+
                   </tr>
                 ))}
               </tbody>
