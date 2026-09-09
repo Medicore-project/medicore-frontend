@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { staffApi, type StaffResponse, type StaffListParams } from '../api/staff';
+import { departmentsApi, type Department } from '../api/departments';
 import StaffFormModal from './StaffFormModal';
 import RoleAssignmentModal from './RoleAssignmentModal';
 
@@ -40,6 +41,19 @@ export const StaffListPage: React.FC = () => {
   const [assigningRoleStaff, setAssigningRoleStaff] = useState<StaffResponse | null>(null);
 
   const [deactivatingId, setDeactivatingId] = useState<string | number | null>(null);
+
+  // Department lookup map: id -> name
+  const [departmentMap, setDepartmentMap] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    departmentsApi.list().then((depts: Department[]) => {
+      const map = new Map<string, string>();
+      depts.forEach((d) => map.set(String(d.id), d.name));
+      setDepartmentMap(map);
+    }).catch(() => {
+      // silently ignore — department names just won't resolve
+    });
+  }, []);
 
   const fetchStaff = useCallback(async () => {
     setIsLoading(true);
@@ -135,6 +149,11 @@ export const StaffListPage: React.FC = () => {
     fetchStaff();
   };
 
+  const getDepartmentName = (departmentId?: string | number): string => {
+    if (departmentId === undefined || departmentId === null) return '—';
+    return departmentMap.get(String(departmentId)) ?? '—';
+  };
+
   return (
     <div className="management-page">
       <div className="page-header">
@@ -221,7 +240,7 @@ export const StaffListPage: React.FC = () => {
                     <td className="font-semibold">{s.fullName}</td>
                     <td className="text-muted">{s.email}</td>
                     <td>{s.role}</td>
-                    <td className="text-muted">{s.departmentId ?? '—'}</td>
+                    <td className="text-muted">{getDepartmentName(s.departmentId)}</td>
                     <td className="text-muted">{s.specialization ?? '—'}</td>
                     <td>
                       <span className={`badge ${s.isActive ? 'badge-success' : 'badge-inactive'}`}>

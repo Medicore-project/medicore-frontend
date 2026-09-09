@@ -1,21 +1,21 @@
 import apiClient from './client';
 
 export interface AuditReportRow {
-  id: string | number;
-  timestamp: string;
-  userId: string | number;
-  userName: string;
+  id: string;
+  userId: string;
+  userEmail: string;
+  role: string;
   actionType: string;
-  resourceName: string;
-  details?: string;
-  ipAddress?: string;
+  entityType: string;
+  entityId: string;
+  occurredAtUtc: string;
 }
 
 export interface AuditReportParams {
   startDate?: string;
   endDate?: string;
   actionType?: string;
-  userId?: string | number;
+  userId?: string;
 }
 
 export const reportsApi = {
@@ -24,7 +24,7 @@ export const reportsApi = {
     if (params.startDate) query.set('startDate', params.startDate);
     if (params.endDate) query.set('endDate', params.endDate);
     if (params.actionType) query.set('actionType', params.actionType);
-    if (params.userId) query.set('userId', String(params.userId));
+    if (params.userId) query.set('userId', params.userId);
     return apiClient.get<AuditReportRow[]>(`/api/reports/audit?${query.toString()}`).then((r) => r.data);
   },
 };
