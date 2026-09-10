@@ -77,6 +77,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = (props) => {
     if (!isEdit) {
       if (!email.trim()) errs.email = 'Email is required.';
       if (!password.trim()) errs.password = 'Password is required.';
+      else if (password.trim().length < 8) errs.password = 'Password must be at least 8 characters long.';
     }
     if (!departmentId.trim()) errs.departmentId = 'Department is required.';
     setFieldErrors(errs);
