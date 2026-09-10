@@ -77,6 +77,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = (props) => {
     if (!isEdit) {
       if (!email.trim()) errs.email = 'Email is required.';
       if (!password.trim()) errs.password = 'Password is required.';
+      else if (password.trim().length < 8) errs.password = 'Password must be at least 8 characters long.';
     }
     if (!departmentId.trim()) errs.departmentId = 'Department is required.';
     setFieldErrors(errs);
@@ -187,6 +188,9 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = (props) => {
                   placeholder="Password"
                 />
                 {fieldErrors.password && <span className="field-error">{fieldErrors.password}</span>}
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.5' }}>
+                  Min. 8 characters. Use a mix of uppercase, lowercase, numbers and special characters (e.g. <code style={{ fontSize: '11px' }}>A1b@cd</code>).
+                </p>
               </div>
             </div>
           )}
