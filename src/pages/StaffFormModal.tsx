@@ -187,6 +187,9 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = (props) => {
                   placeholder="Password"
                 />
                 {fieldErrors.password && <span className="field-error">{fieldErrors.password}</span>}
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.5' }}>
+                  Min. 8 characters. Use a mix of uppercase, lowercase, numbers and special characters (e.g. <code style={{ fontSize: '11px' }}>A1b@cd</code>).
+                </p>
               </div>
             </div>
           )}
