@@ -1,0 +1,309 @@
+import axios from 'axios';
+import React, { useState, type FormEvent } from 'react';
+import {
+  patientApi,
+  isDuplicatePatientError,
+  isValidationProblem,
+  type CreatePatientBody,
+  type DuplicatePatientResponse,
+  type PatientRegistrationResponse,
+  type ValidationProblemResponse,
+} from '../api/patients';
+
+type PatientForm = CreatePatientBody;
+type FieldErrors = Partial<Record<keyof PatientForm, string>>;
+
+const EMPTY_FORM: PatientForm = {
+  nic: '',
+  firstName: '',
+  lastName: '',
+  dateOfBirth: '',
+  gender: '',
+  email: '',
+  phone: '',
+  addressLine1: '',
+  addressLine2: '',
+  district: '',
+  emergencyContactName: '',
+  emergencyContactPhone: '',
+};
+
+const NIC_PATTERN = /^(?:\d{12}|\d{9}[VX])$/;
+const PHONE_PATTERN = /^(?:\+94|0)\d{9}$/;
+
+function normalizeNic(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+function normalizePhone(value: string): string {
+  return value.replace(/[\s\-()]/g, '');
+}
+
+function firstError(errors: Record<string, string[]> | undefined): FieldErrors {
+  if (!errors) return {};
+
+  return Object.entries(errors).reduce<FieldErrors>((result, [field, messages]) => {
+    const key = `${field.charAt(0).toLowerCase()}${field.slice(1)}` as keyof PatientForm;
+    if (key in EMPTY_FORM && messages.length > 0) result[key] = messages[0];
+    return result;
+  }, {});
+}
+
+export const PatientRegistrationPage: React.FC = () => {
+  const [form, setForm] = useState<PatientForm>(EMPTY_FORM);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState<DuplicatePatientResponse | null>(null);
+  const [registered, setRegistered] = useState<PatientRegistrationResponse | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const updateField = (field: keyof PatientForm, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setRequestError(null);
+    setDuplicate(null);
+  };
+
+  const validate = (): boolean => {
+    const errors: FieldErrors = {};
+    const requiredFields: Array<keyof PatientForm> = [
+      'nic',
+      'firstName',
+      'lastName',
+      'dateOfBirth',
+      'gender',
+      'email',
+      'phone',
+      'addressLine1',
+      'district',
+    ];
+
+    requiredFields.forEach((field) => {
+      if (!form[field]?.trim()) errors[field] = 'This field is required.';
+    });
+
+    if (form.nic && !NIC_PATTERN.test(normalizeNic(form.nic))) {
+      errors.nic = 'Enter 12 digits, or 9 digits followed by V or X.';
+    }
+    if (form.dateOfBirth && form.dateOfBirth > today) {
+      errors.dateOfBirth = 'Date of birth cannot be in the future.';
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errors.email = 'Enter a valid email address.';
+    }
+    if (form.phone && !PHONE_PATTERN.test(normalizePhone(form.phone))) {
+      errors.phone = 'Use a Sri Lankan number such as 0771234567 or +94771234567.';
+    }
+    if (form.emergencyContactPhone && !PHONE_PATTERN.test(normalizePhone(form.emergencyContactPhone))) {
+      errors.emergencyContactPhone = 'Enter a valid Sri Lankan phone number.';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    setRequestError(null);
+    setDuplicate(null);
+    setRegistered(null);
+
+    const body: CreatePatientBody = {
+      ...form,
+      nic: normalizeNic(form.nic),
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      email: form.email.trim().toLowerCase(),
+      phone: normalizePhone(form.phone),
+      addressLine1: form.addressLine1.trim(),
+      addressLine2: form.addressLine2?.trim() || undefined,
+      district: form.district.trim(),
+      emergencyContactName: form.emergencyContactName?.trim() || undefined,
+      emergencyContactPhone: form.emergencyContactPhone
+        ? normalizePhone(form.emergencyContactPhone)
+        : undefined,
+    };
+
+    try {
+      const patient = await patientApi.register(body);
+      setRegistered(patient);
+    } catch (error: unknown) {
+      if (isDuplicatePatientError(error) && axios.isAxiosError<DuplicatePatientResponse>(error)) {
+        setDuplicate(error.response?.data ?? null);
+      } else if (isValidationProblem(error) && axios.isAxiosError<ValidationProblemResponse>(error)) {
+        setFieldErrors(firstError(error.response?.data.errors));
+        setRequestError(error.response?.data.title ?? 'Please correct the highlighted fields.');
+      } else if (axios.isAxiosError(error) && error.response?.status === 403) {
+        setRequestError('You do not have permission to register patients.');
+      } else {
+        setRequestError('Patient registration failed. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const registerAnother = () => {
+    setForm(EMPTY_FORM);
+    setFieldErrors({});
+    setRegistered(null);
+    setDuplicate(null);
+    setRequestError(null);
+  };
+
+  return (
+    <div className="management-page patient-registration-page">
+      <div className="page-header">
+        <div>
+          <h1>Register Patient</h1>
+          <p className="page-subtitle">Create a patient profile for appointment booking.</p>
+        </div>
+      </div>
+
+      {registered && (
+        <section className="registration-result registration-success" role="status">
+          <span className="registration-result-label">Patient successfully registered</span>
+          <strong className="patient-number">{registered.patientNumber}</strong>
+          <span>{registered.fullName}</span>
+          <button type="button" className="btn btn-primary" onClick={registerAnother}>
+            Register another patient
+          </button>
+        </section>
+      )}
+
+      {duplicate && (
+        <section className="registration-result registration-duplicate" role="alert">
+          <span className="registration-result-label">Patient already registered</span>
+          <strong className="patient-number">{duplicate.existingPatient.patientNumber}</strong>
+          <span>{duplicate.existingPatient.fullName}</span>
+          <span className="text-muted">{duplicate.existingPatient.email}</span>
+          {duplicate.existingPatient.isArchived && (
+            <span className="archived-notice">This patient is archived. Ask an administrator to restore the record.</span>
+          )}
+          <p className="existing-patient-help">
+            Use this existing patient number when booking the appointment; no duplicate record was created.
+          </p>
+        </section>
+      )}
+
+      {requestError && (
+        <div className="alert alert-danger" role="alert">
+          <span>{requestError}</span>
+          <button type="button" className="alert-close" onClick={() => setRequestError(null)}>×</button>
+        </div>
+      )}
+
+      {!registered && (
+        <form className="card patient-registration-form" onSubmit={handleSubmit} noValidate>
+          <fieldset disabled={isSubmitting}>
+            <legend>Personal details</legend>
+            <div className="patient-form-grid">
+              <div className="form-group">
+                <label htmlFor="patient-nic">NIC *</label>
+                <input id="patient-nic" value={form.nic} maxLength={12} autoComplete="off"
+                  onChange={(event) => updateField('nic', event.target.value)} placeholder="200012345678" />
+                {fieldErrors.nic && <span className="field-error">{fieldErrors.nic}</span>}
+              </div>
+              <div className="form-group">
+                <label htmlFor="patient-dob">Date of birth *</label>
+                <input id="patient-dob" type="date" value={form.dateOfBirth} max={today}
+                  onChange={(event) => updateField('dateOfBirth', event.target.value)} />
+                {fieldErrors.dateOfBirth && <span className="field-error">{fieldErrors.dateOfBirth}</span>}
+              </div>
+              <div className="form-group">
+                <label htmlFor="patient-first-name">First name *</label>
+                <input id="patient-first-name" value={form.firstName} maxLength={100} autoComplete="given-name"
+                  onChange={(event) => updateField('firstName', event.target.value)} />
+                {fieldErrors.firstName && <span className="field-error">{fieldErrors.firstName}</span>}
+              </div>
+              <div className="form-group">
+                <label htmlFor="patient-last-name">Last name *</label>
+                <input id="patient-last-name" value={form.lastName} maxLength={100} autoComplete="family-name"
+                  onChange={(event) => updateField('lastName', event.target.value)} />
+                {fieldErrors.lastName && <span className="field-error">{fieldErrors.lastName}</span>}
+              </div>
+              <div className="form-group patient-field-full">
+                <label htmlFor="patient-gender">Gender *</label>
+                <select id="patient-gender" value={form.gender}
+                  onChange={(event) => updateField('gender', event.target.value)}>
+                  <option value="">Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                  <option value="PreferNotToSay">Prefer not to say</option>
+                </select>
+                {fieldErrors.gender && <span className="field-error">{fieldErrors.gender}</span>}
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset disabled={isSubmitting}>
+            <legend>Contact details</legend>
+            <div className="patient-form-grid">
+              <div className="form-group">
+                <label htmlFor="patient-email">Email *</label>
+                <input id="patient-email" type="email" value={form.email} maxLength={256} autoComplete="email"
+                  onChange={(event) => updateField('email', event.target.value)} placeholder="patient@example.com" />
+                {fieldErrors.email && <span className="field-error">{fieldErrors.email}</span>}
+              </div>
+              <div className="form-group">
+                <label htmlFor="patient-phone">Phone *</label>
+                <input id="patient-phone" type="tel" value={form.phone} maxLength={20} autoComplete="tel"
+                  onChange={(event) => updateField('phone', event.target.value)} placeholder="0771234567" />
+                {fieldErrors.phone && <span className="field-error">{fieldErrors.phone}</span>}
+              </div>
+              <div className="form-group patient-field-full">
+                <label htmlFor="patient-address-1">Address line 1 *</label>
+                <input id="patient-address-1" value={form.addressLine1} maxLength={200} autoComplete="address-line1"
+                  onChange={(event) => updateField('addressLine1', event.target.value)} />
+                {fieldErrors.addressLine1 && <span className="field-error">{fieldErrors.addressLine1}</span>}
+              </div>
+              <div className="form-group">
+                <label htmlFor="patient-address-2">Address line 2</label>
+                <input id="patient-address-2" value={form.addressLine2} maxLength={200} autoComplete="address-line2"
+                  onChange={(event) => updateField('addressLine2', event.target.value)} />
+                {fieldErrors.addressLine2 && <span className="field-error">{fieldErrors.addressLine2}</span>}
+              </div>
+              <div className="form-group">
+                <label htmlFor="patient-district">District *</label>
+                <input id="patient-district" value={form.district} maxLength={100} autoComplete="address-level1"
+                  onChange={(event) => updateField('district', event.target.value)} />
+                {fieldErrors.district && <span className="field-error">{fieldErrors.district}</span>}
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset disabled={isSubmitting}>
+            <legend>Emergency contact (optional)</legend>
+            <div className="patient-form-grid">
+              <div className="form-group">
+                <label htmlFor="emergency-name">Contact name</label>
+                <input id="emergency-name" value={form.emergencyContactName} maxLength={200}
+                  onChange={(event) => updateField('emergencyContactName', event.target.value)} />
+                {fieldErrors.emergencyContactName && <span className="field-error">{fieldErrors.emergencyContactName}</span>}
+              </div>
+              <div className="form-group">
+                <label htmlFor="emergency-phone">Contact phone</label>
+                <input id="emergency-phone" type="tel" value={form.emergencyContactPhone} maxLength={20}
+                  onChange={(event) => updateField('emergencyContactPhone', event.target.value)} />
+                {fieldErrors.emergencyContactPhone && <span className="field-error">{fieldErrors.emergencyContactPhone}</span>}
+              </div>
+            </div>
+          </fieldset>
+
+          <div className="patient-form-actions">
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Registering…' : 'Register patient'}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+};
+
+export default PatientRegistrationPage;

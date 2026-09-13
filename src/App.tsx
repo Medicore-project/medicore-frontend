@@ -7,6 +7,7 @@ import SpecializationsPage from './pages/SpecializationsPage';
 import StaffListPage from './pages/StaffListPage';
 import StaffDetailPage from './pages/StaffDetailPage';
 import AuditReportPage from './pages/AuditReportPage';
+import PatientRegistrationPage from './pages/PatientRegistrationPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 
@@ -27,6 +28,12 @@ export const App: React.FC = () => {
           <Route path="/staff" element={<StaffListPage />} />
           <Route path="/staff/:id" element={<StaffDetailPage />} />
           <Route path="/reports/audit" element={<AuditReportPage />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={['Admin', 'Receptionist']} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/patients" element={<PatientRegistrationPage />} />
+          <Route path="/patients/register" element={<Navigate to="/patients" replace />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
