@@ -919,3 +919,85 @@ body {
     grid-column: auto;
   }
 }
+
+.patient-profile-page {
+  max-width: 960px;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.profile-breadcrumb {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.profile-breadcrumb:hover {
+  text-decoration: underline;
+}
+
+.patient-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+
+.patient-profile-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.patient-profile-grid span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.patient-profile-grid strong {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.profile-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.profile-back-link {
+  align-self: flex-start;
+}
+
+.patient-edit-modal {
+  max-width: 760px;
+}
+
+@media (max-width: 720px) {
+  .patient-profile-page .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .profile-actions {
+    width: 100%;
+  }
+
+  .profile-actions .btn {
+    flex: 1;
+  }
+
+  .patient-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
