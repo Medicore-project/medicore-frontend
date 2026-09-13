@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { medicalRecordApi, type MedicalRecordResponse } from '../api/medicalRecords';
 import MedicalRecordFormModal from '../components/patients/MedicalRecordFormModal';
+import { useAuth } from '../contexts/AuthContext';
+import { canWriteMedicalRecords } from '../utils/permissions';
 
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat('en-GB', {
@@ -14,6 +16,8 @@ function formatDateTime(value: string): string {
 export const MedicalRecordDetailPage: React.FC = () => {
   const { patientId, recordId } = useParams<{ patientId: string; recordId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canWrite = canWriteMedicalRecords(user?.role);
   const [record, setRecord] = useState<MedicalRecordResponse | null>(null);
   const [versions, setVersions] = useState<MedicalRecordResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -111,12 +115,14 @@ export const MedicalRecordDetailPage: React.FC = () => {
           <h1>Clinical entry</h1>
           <p className="page-subtitle">Record {record.recordId}</p>
         </div>
-        <div className="profile-actions">
-          <button type="button" className="btn btn-outline" onClick={() => setIsEditing(true)}>Edit record</button>
-          <button type="button" className="btn btn-danger-outline" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? 'Deleting…' : 'Delete record'}
-          </button>
-        </div>
+        {canWrite && (
+          <div className="profile-actions">
+            <button type="button" className="btn btn-outline" onClick={() => setIsEditing(true)}>Edit record</button>
+            <button type="button" className="btn btn-danger-outline" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? 'Deleting…' : 'Delete record'}
+            </button>
+          </div>
+        )}
       </div>
 
       {error && <div className="alert alert-danger" role="alert">{error}</div>}
@@ -186,7 +192,7 @@ export const MedicalRecordDetailPage: React.FC = () => {
         </div>
       </section>
 
-      {isEditing && patientId && (
+      {canWrite && isEditing && patientId && (
         <MedicalRecordFormModal
           patientId={patientId}
           record={record}

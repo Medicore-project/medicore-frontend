@@ -14,6 +14,7 @@ import PatientMedicalRecordsPage from './pages/PatientMedicalRecordsPage';
 import MedicalRecordDetailPage from './pages/MedicalRecordDetailPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
+import { FRONT_DESK_ROLES, PATIENT_READER_ROLES } from './utils/permissions';
 
 export const App: React.FC = () => {
   return (
@@ -36,11 +37,15 @@ export const App: React.FC = () => {
           <Route path="/reports/audit" element={<AuditReportPage />} />
         </Route>
       </Route>
-      <Route element={<ProtectedRoute allowedRoles={['Admin', 'Receptionist']} />}>
+      <Route element={<ProtectedRoute allowedRoles={[...PATIENT_READER_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/patients" element={<PatientSearchPage />} />
-          <Route path="/patients/register" element={<PatientRegistrationPage />} />
           <Route path="/patients/:id" element={<PatientProfilePage />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/patients/register" element={<PatientRegistrationPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -7,6 +7,8 @@ import {
   type PagedMedicalRecordResponse,
 } from '../api/medicalRecords';
 import MedicalRecordFormModal from '../components/patients/MedicalRecordFormModal';
+import { useAuth } from '../contexts/AuthContext';
+import { canWriteMedicalRecords } from '../utils/permissions';
 
 const PAGE_SIZE = 10;
 
@@ -19,6 +21,8 @@ function formatDateTime(value: string): string {
 
 export const PatientMedicalRecordsPage: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
+  const { user } = useAuth();
+  const canWrite = canWriteMedicalRecords(user?.role);
   const [result, setResult] = useState<PagedMedicalRecordResponse | null>(null);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,9 +74,11 @@ export const PatientMedicalRecordsPage: React.FC = () => {
           <h1>Medical records</h1>
           <p className="page-subtitle">Patient ID: <strong>{patientId}</strong></p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => setIsCreating(true)} disabled={!patientId}>
-          New medical record
-        </button>
+        {canWrite && (
+          <button type="button" className="btn btn-primary" onClick={() => setIsCreating(true)} disabled={!patientId}>
+            New medical record
+          </button>
+        )}
       </div>
 
       {error && <div className="alert alert-danger" role="alert">{error}</div>}
@@ -151,12 +157,12 @@ export const PatientMedicalRecordsPage: React.FC = () => {
         ) : (
           <div className="table-empty">
             <strong>No medical records yet</strong>
-            <p>Add the first clinical entry for this patient.</p>
+            <p>{canWrite ? 'Add the first clinical entry for this patient.' : 'No clinical entries are available.'}</p>
           </div>
         )}
       </section>
 
-      {isCreating && patientId && (
+      {canWrite && isCreating && patientId && (
         <MedicalRecordFormModal
           patientId={patientId}
           onClose={() => setIsCreating(false)}
