@@ -9,6 +9,7 @@ import StaffDetailPage from './pages/StaffDetailPage';
 import AuditReportPage from './pages/AuditReportPage';
 import PatientRegistrationPage from './pages/PatientRegistrationPage';
 import PatientProfilePage from './pages/PatientProfilePage';
+import PatientSearchPage from './pages/PatientSearchPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 
@@ -33,8 +34,8 @@ export const App: React.FC = () => {
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['Admin', 'Receptionist']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/patients" element={<PatientRegistrationPage />} />
-          <Route path="/patients/register" element={<Navigate to="/patients" replace />} />
+          <Route path="/patients" element={<PatientSearchPage />} />
+          <Route path="/patients/register" element={<PatientRegistrationPage />} />
           <Route path="/patients/:id" element={<PatientProfilePage />} />
         </Route>
       </Route>
