@@ -821,6 +821,57 @@ body {
   max-width: 920px;
 }
 
+.patient-search-page {
+  max-width: 1200px;
+}
+
+.patient-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.patient-search-bar .filter-search {
+  flex: 1;
+}
+
+.patient-search-summary {
+  margin: -8px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.patient-number-small {
+  white-space: nowrap;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.patient-search-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.patient-search-actions,
+.patient-search-actions-heading {
+  text-align: right;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .patient-registration-form {
   padding: 24px;
   display: flex;
@@ -917,6 +968,12 @@ body {
 
   .patient-field-full {
     grid-column: auto;
+  }
+
+  .patient-search-page .page-header,
+  .patient-search-bar {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

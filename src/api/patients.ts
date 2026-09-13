@@ -31,6 +31,33 @@ export interface PatientProfileResponse extends CreatePatientBody {
   updatedAt?: string | null;
 }
 
+export interface PatientSearchParams {
+  q: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PatientSearchResult {
+  patientId: string;
+  patientNumber: string;
+  nic: string;
+  fullName: string;
+  dateOfBirth: string;
+  phone: string;
+  email: string;
+  district: string;
+}
+
+export interface PatientSearchResponse {
+  items: PatientSearchResult[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
 export type UpdatePatientBody = Omit<CreatePatientBody, 'nic'>;
 
 export interface ExistingPatientSummary {
@@ -61,6 +88,16 @@ export const patientApi = {
     apiClient
       .get<PatientProfileResponse>(`/patient/api/patients/${patientId}`)
       .then((response) => response.data),
+
+  search: (params: PatientSearchParams): Promise<PatientSearchResponse> => {
+    const query = new URLSearchParams({ q: params.q });
+    if (params.page !== undefined) query.set('page', String(params.page));
+    if (params.pageSize !== undefined) query.set('pageSize', String(params.pageSize));
+
+    return apiClient
+      .get<PatientSearchResponse>(`/patient/api/patients/search?${query.toString()}`)
+      .then((response) => response.data);
+  },
 
   update: (patientId: string, body: UpdatePatientBody): Promise<PatientProfileResponse> =>
     apiClient

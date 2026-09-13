@@ -1,6 +1,6 @@
 import axios from 'axios';
 import React, { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   patientApi,
   isDuplicatePatientError,
@@ -84,6 +84,7 @@ export const PatientRegistrationPage: React.FC = () => {
     <div className="management-page patient-registration-page">
       <div className="page-header">
         <div>
+          <Link className="profile-breadcrumb" to="/patients">Patients</Link>
           <h1>Register Patient</h1>
           <p className="page-subtitle">Create a patient profile for appointment booking.</p>
         </div>

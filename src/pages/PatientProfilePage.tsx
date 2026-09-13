@@ -1,6 +1,6 @@
 import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { patientApi, type PatientProfileResponse } from '../api/patients';
 import PatientEditModal from '../components/patients/PatientEditModal';
 
@@ -11,6 +11,9 @@ function formatDate(value?: string | null): string {
 
 export const PatientProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const patientSearch = (location.state as { patientSearch?: string } | null)?.patientSearch;
+  const patientsPath = patientSearch ? `/patients?${patientSearch}` : '/patients';
   const [patient, setPatient] = useState<PatientProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -79,7 +82,7 @@ export const PatientProfilePage: React.FC = () => {
         <section className="registration-result registration-success" role="status">
           <span className="registration-result-label">Patient profile deleted</span>
           <p>The profile was archived and will no longer appear in patient queries.</p>
-          <Link className="btn btn-primary" to="/patients">Return to patient registration</Link>
+          <Link className="btn btn-primary" to={patientsPath}>Return to patient search</Link>
         </section>
       </div>
     );
@@ -89,7 +92,7 @@ export const PatientProfilePage: React.FC = () => {
     return (
       <div className="management-page">
         <div className="alert alert-danger" role="alert">{error ?? 'Patient not found.'}</div>
-        <Link className="btn btn-secondary profile-back-link" to="/patients">← Back to patients</Link>
+        <Link className="btn btn-secondary profile-back-link" to={patientsPath}>← Back to patients</Link>
       </div>
     );
   }
@@ -98,7 +101,7 @@ export const PatientProfilePage: React.FC = () => {
     <div className="management-page patient-profile-page">
       <div className="page-header">
         <div>
-          <Link className="profile-breadcrumb" to="/patients">Patients</Link>
+          <Link className="profile-breadcrumb" to={patientsPath}>Patients</Link>
           <h1>{patient.fullName}</h1>
           <p className="page-subtitle">Patient number: <strong>{patient.patientNumber}</strong></p>
         </div>
