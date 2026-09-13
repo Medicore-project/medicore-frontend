@@ -1058,3 +1058,248 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.medical-records-page,
+.medical-record-detail-page {
+  max-width: 1180px;
+}
+
+.table-secondary-text {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.medical-records-page code,
+.medical-record-detail-page code {
+  color: #475569;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.medical-record-modal {
+  max-width: 860px;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: var(--text-main);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.form-group textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.field-help {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.condition-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.condition-section-header,
+.record-card-header,
+.condition-card > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.condition-section-header h3 {
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.condition-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.condition-editor {
+  position: relative;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.condition-editor legend {
+  padding: 0 6px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.condition-fields {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.condition-notes-field {
+  grid-column: 1 / -1;
+}
+
+.record-card-header time,
+.version-timeline time {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.record-card-header .detail-section-title {
+  margin-top: 12px;
+}
+
+.clinical-notes {
+  margin: 8px 0 22px;
+  color: var(--text-main);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.record-metadata {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.record-metadata div {
+  min-width: 0;
+}
+
+.record-metadata dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.record-metadata dd {
+  margin: 5px 0 0;
+  color: var(--text-main);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.condition-list,
+.version-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.condition-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.condition-card > div {
+  justify-content: flex-start;
+}
+
+.condition-card p {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.condition-card code {
+  margin-left: 10px;
+}
+
+.condition-status-active {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.condition-status-resolved {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.condition-status-historical {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.version-timeline {
+  margin-top: 16px;
+}
+
+.version-timeline details {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.version-timeline summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.version-content {
+  padding: 0 16px 16px;
+  color: var(--text-main);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.version-content small {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 760px) {
+  .medical-records-page .page-header,
+  .medical-record-detail-page .page-header,
+  .record-card-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .condition-fields,
+  .record-metadata {
+    grid-template-columns: 1fr;
+  }
+
+  .condition-notes-field {
+    grid-column: auto;
+  }
+
+  .version-timeline summary {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

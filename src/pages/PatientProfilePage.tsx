@@ -106,6 +106,7 @@ export const PatientProfilePage: React.FC = () => {
           <p className="page-subtitle">Patient number: <strong>{patient.patientNumber}</strong></p>
         </div>
         <div className="profile-actions">
+          <Link className="btn btn-primary" to={`/patients/${patient.patientId}/records`}>Medical records</Link>
           <button type="button" className="btn btn-outline" onClick={() => setIsEditing(true)}>Edit profile</button>
           <button type="button" className="btn btn-danger-outline" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? 'Deleting…' : 'Delete patient'}

@@ -1,3 +1,5 @@
+import apiClient from './client';
+
 export type ConditionClinicalStatus = 'Active' | 'Resolved' | 'Historical';
 
 export interface ConditionInput {
@@ -51,3 +53,50 @@ export interface PagedMedicalRecordResponse {
   hasPreviousPage: boolean;
   hasNextPage: boolean;
 }
+
+export interface MedicalRecordListParams {
+  page?: number;
+  pageSize?: number;
+}
+
+const recordsPath = (patientId: string) => `/patient/api/patients/${patientId}/records`;
+
+export const medicalRecordApi = {
+  async list(patientId: string, params: MedicalRecordListParams = {}): Promise<PagedMedicalRecordResponse> {
+    const response = await apiClient.get<PagedMedicalRecordResponse>(recordsPath(patientId), { params });
+    return response.data;
+  },
+
+  async getById(patientId: string, recordId: string): Promise<MedicalRecordResponse> {
+    const response = await apiClient.get<MedicalRecordResponse>(`${recordsPath(patientId)}/${recordId}`);
+    return response.data;
+  },
+
+  async getVersions(patientId: string, recordId: string): Promise<MedicalRecordResponse[]> {
+    const response = await apiClient.get<MedicalRecordResponse[]>(
+      `${recordsPath(patientId)}/${recordId}/versions`,
+    );
+    return response.data;
+  },
+
+  async create(patientId: string, body: CreateMedicalRecordBody): Promise<MedicalRecordResponse> {
+    const response = await apiClient.post<MedicalRecordResponse>(recordsPath(patientId), body);
+    return response.data;
+  },
+
+  async update(
+    patientId: string,
+    recordId: string,
+    body: UpdateMedicalRecordBody,
+  ): Promise<MedicalRecordResponse> {
+    const response = await apiClient.put<MedicalRecordResponse>(
+      `${recordsPath(patientId)}/${recordId}`,
+      body,
+    );
+    return response.data;
+  },
+
+  async remove(patientId: string, recordId: string): Promise<void> {
+    await apiClient.delete(`${recordsPath(patientId)}/${recordId}`);
+  },
+};

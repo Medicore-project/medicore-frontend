@@ -10,6 +10,8 @@ import AuditReportPage from './pages/AuditReportPage';
 import PatientRegistrationPage from './pages/PatientRegistrationPage';
 import PatientProfilePage from './pages/PatientProfilePage';
 import PatientSearchPage from './pages/PatientSearchPage';
+import PatientMedicalRecordsPage from './pages/PatientMedicalRecordsPage';
+import MedicalRecordDetailPage from './pages/MedicalRecordDetailPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 
@@ -21,6 +23,8 @@ export const App: React.FC = () => {
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/patients/:patientId/records" element={<PatientMedicalRecordsPage />} />
+          <Route path="/patients/:patientId/records/:recordId" element={<MedicalRecordDetailPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
