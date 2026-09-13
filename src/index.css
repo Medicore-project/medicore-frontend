@@ -817,3 +817,105 @@ body {
   color: var(--text-main);
 }
 
+.patient-registration-page {
+  max-width: 920px;
+}
+
+.patient-registration-form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.patient-registration-form fieldset {
+  border: 0;
+  min-width: 0;
+}
+
+.patient-registration-form legend {
+  width: 100%;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.patient-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.patient-field-full {
+  grid-column: 1 / -1;
+}
+
+.patient-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-color);
+}
+
+.registration-result {
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.registration-success {
+  color: var(--success-text);
+  background-color: var(--success-bg);
+  border-color: var(--success-border);
+}
+
+.registration-duplicate {
+  color: #92400e;
+  background-color: #fffbeb;
+  border-color: #fde68a;
+}
+
+.registration-result-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.patient-number {
+  font-size: 28px;
+  letter-spacing: 0.04em;
+}
+
+.registration-result .btn {
+  margin-top: 8px;
+}
+
+.existing-patient-help,
+.archived-notice {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.archived-notice {
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .content-area {
+    padding: 18px;
+  }
+
+  .patient-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-field-full {
+    grid-column: auto;
+  }
+}
