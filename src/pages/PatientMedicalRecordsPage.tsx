@@ -7,40 +7,45 @@ import {
   type PagedMedicalRecordResponse,
 } from '../api/medicalRecords';
 import MedicalRecordFormModal from '../components/patients/MedicalRecordFormModal';
+import MedicalRecordTimeline from '../components/patients/MedicalRecordTimeline';
 import { useAuth } from '../contexts/AuthContext';
 import { canWriteMedicalRecords } from '../utils/permissions';
 
 const PAGE_SIZE = 10;
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
 
 export const PatientMedicalRecordsPage: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
   const { user } = useAuth();
   const canWrite = canWriteMedicalRecords(user?.role);
   const [result, setResult] = useState<PagedMedicalRecordResponse | null>(null);
-  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const loadRecords = useCallback(async () => {
+  const loadRecords = useCallback(async (requestedPage = 1, append = false) => {
     if (!patientId) {
       setError('Invalid patient identifier.');
       setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    if (append) setIsLoadingMore(true);
+    else setIsLoading(true);
     setError(null);
     try {
-      setResult(await medicalRecordApi.list(patientId, { page, pageSize: PAGE_SIZE }));
+      const response = await medicalRecordApi.list(patientId, {
+        page: requestedPage,
+        pageSize: PAGE_SIZE,
+      });
+      setResult((current) => {
+        if (!append || !current) return response;
+
+        const recordsById = new Map(current.items.map((record) => [record.recordId, record]));
+        response.items.forEach((record) => recordsById.set(record.recordId, record));
+        return { ...response, items: [...recordsById.values()] };
+      });
     } catch (requestError: unknown) {
       if (axios.isAxiosError(requestError) && requestError.response?.status === 404) {
         setError('Patient not found or the profile has been deleted.');
@@ -50,20 +55,20 @@ export const PatientMedicalRecordsPage: React.FC = () => {
         setError('Failed to load medical records.');
       }
     } finally {
-      setIsLoading(false);
+      if (append) setIsLoadingMore(false);
+      else setIsLoading(false);
     }
-  }, [page, patientId]);
+  }, [patientId]);
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- route and page changes load the matching records
-    void loadRecords();
+    void loadRecords(1);
   }, [loadRecords]);
 
   const handleCreated = (record: MedicalRecordResponse) => {
     setIsCreating(false);
     setSuccessMessage(`Medical record version ${record.version} created successfully.`);
-    setPage(1);
-    void loadRecords();
+    void loadRecords(1);
   };
 
   return (
@@ -89,69 +94,32 @@ export const PatientMedicalRecordsPage: React.FC = () => {
         </div>
       )}
 
-      <section className="table-card">
+      <section className="detail-card medical-timeline-section">
         {isLoading ? (
           <div className="table-loading"><div className="spinner" /><p>Loading medical records…</p></div>
         ) : result && result.items.length > 0 ? (
           <>
-            <div className="table-responsive">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Authored</th>
-                    <th>Clinician</th>
-                    <th>Role</th>
-                    <th>Visit reference</th>
-                    <th>Version</th>
-                    <th aria-label="Actions" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.items.map((record) => (
-                    <tr key={record.recordId}>
-                      <td>{formatDateTime(record.authoredAtUtc)}</td>
-                      <td>
-                        <span className="font-semibold">{record.authorClinicianEmail}</span>
-                        <small className="table-secondary-text">{record.authorClinicianId}</small>
-                      </td>
-                      <td><span className="badge badge-inactive">{record.authorClinicianRole}</span></td>
-                      <td><code>{record.visitReference}</code></td>
-                      <td><span className="badge badge-success">v{record.version}</span></td>
-                      <td>
-                        <Link
-                          className="btn btn-outline btn-sm"
-                          to={`/patients/${patientId}/records/${record.recordId}`}
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="pagination-bar">
-              <span className="pagination-info">
-                Page {result.page} of {Math.max(result.totalPages, 1)} · {result.totalCount} records
-              </span>
-              <div className="action-buttons">
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setPage((current) => current - 1)}
-                  disabled={!result.hasPreviousPage}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setPage((current) => current + 1)}
-                  disabled={!result.hasNextPage}
-                >
-                  Next
-                </button>
+            <div className="medical-timeline-heading">
+              <div>
+                <h2>Clinical timeline</h2>
+                <p>{result.totalCount} current entr{result.totalCount === 1 ? 'y' : 'ies'}, newest first</p>
               </div>
+            </div>
+            <MedicalRecordTimeline patientId={patientId ?? ''} records={result.items} />
+            <div className="timeline-pagination">
+              <span className="pagination-info">
+                Showing {result.items.length} of {result.totalCount} entries
+              </span>
+              {result.hasNextPage && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => void loadRecords(result.page + 1, true)}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore ? 'Loading…' : 'Load older entries'}
+                </button>
+              )}
             </div>
           </>
         ) : (

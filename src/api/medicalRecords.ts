@@ -25,7 +25,7 @@ export interface UpdateMedicalRecordBody {
   conditions: ConditionInput[];
 }
 
-export interface MedicalRecordSummary {
+export interface MedicalRecordMetadata {
   recordId: string;
   versionId: string;
   patientId: string;
@@ -37,7 +37,12 @@ export interface MedicalRecordSummary {
   version: number;
 }
 
-export interface MedicalRecordResponse extends MedicalRecordSummary {
+export interface MedicalRecordSummary extends MedicalRecordMetadata {
+  clinicalNotesPreview: string;
+  conditionCount: number;
+}
+
+export interface MedicalRecordResponse extends MedicalRecordMetadata {
   clinicalNotes: string;
   previousVersionId?: string | null;
   isCurrent: boolean;

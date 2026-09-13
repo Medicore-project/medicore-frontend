@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { medicalRecordApi, type MedicalRecordResponse } from '../api/medicalRecords';
 import MedicalRecordFormModal from '../components/patients/MedicalRecordFormModal';
+import MedicalRecordVersionTimeline from '../components/patients/MedicalRecordVersionTimeline';
 import { useAuth } from '../contexts/AuthContext';
 import { canWriteMedicalRecords } from '../utils/permissions';
 
@@ -174,22 +175,7 @@ export const MedicalRecordDetailPage: React.FC = () => {
       <section className="detail-card">
         <h2 className="detail-section-title">Version history</h2>
         <p className="page-subtitle">All previous content is retained as a read-only clinical history.</p>
-        <div className="version-timeline">
-          {versions.map((version) => (
-            <details key={version.versionId} open={version.isCurrent}>
-              <summary>
-                <span>Version {version.version}{version.isCurrent ? ' · Current' : ''}</span>
-                <time dateTime={version.authoredAtUtc}>{formatDateTime(version.authoredAtUtc)}</time>
-              </summary>
-              <div className="version-content">
-                <p>{version.clinicalNotes}</p>
-                <small>
-                  Authored by {version.authorClinicianEmail} ({version.authorClinicianRole}) · {version.conditions.length} conditions
-                </small>
-              </div>
-            </details>
-          ))}
-        </div>
+        <MedicalRecordVersionTimeline versions={versions} />
       </section>
 
       {canWrite && isEditing && patientId && (
