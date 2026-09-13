@@ -1,5 +1,6 @@
 import axios from 'axios';
 import React, { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   patientApi,
   isDuplicatePatientError,
@@ -9,49 +10,19 @@ import {
   type PatientRegistrationResponse,
   type ValidationProblemResponse,
 } from '../api/patients';
-
-type PatientForm = CreatePatientBody;
-type FieldErrors = Partial<Record<keyof PatientForm, string>>;
-
-const EMPTY_FORM: PatientForm = {
-  nic: '',
-  firstName: '',
-  lastName: '',
-  dateOfBirth: '',
-  gender: '',
-  email: '',
-  phone: '',
-  addressLine1: '',
-  addressLine2: '',
-  district: '',
-  emergencyContactName: '',
-  emergencyContactPhone: '',
-};
-
-const NIC_PATTERN = /^(?:\d{12}|\d{9}[VX])$/;
-const PHONE_PATTERN = /^(?:\+94|0)\d{9}$/;
-
-function normalizeNic(value: string): string {
-  return value.trim().toUpperCase();
-}
-
-function normalizePhone(value: string): string {
-  return value.replace(/[\s\-()]/g, '');
-}
-
-function firstError(errors: Record<string, string[]> | undefined): FieldErrors {
-  if (!errors) return {};
-
-  return Object.entries(errors).reduce<FieldErrors>((result, [field, messages]) => {
-    const key = `${field.charAt(0).toLowerCase()}${field.slice(1)}` as keyof PatientForm;
-    if (key in EMPTY_FORM && messages.length > 0) result[key] = messages[0];
-    return result;
-  }, {});
-}
+import {
+  EMPTY_PATIENT_FORM,
+  mapValidationErrors,
+  normalizePatientForm,
+  validatePatientForm,
+  type PatientFieldErrors,
+  type PatientForm,
+} from '../utils/patientForm';
 
 export const PatientRegistrationPage: React.FC = () => {
-  const [form, setForm] = useState<PatientForm>(EMPTY_FORM);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const navigate = useNavigate();
+  const [form, setForm] = useState<PatientForm>(EMPTY_PATIENT_FORM);
+  const [fieldErrors, setFieldErrors] = useState<PatientFieldErrors>({});
   const [requestError, setRequestError] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState<DuplicatePatientResponse | null>(null);
   const [registered, setRegistered] = useState<PatientRegistrationResponse | null>(null);
@@ -66,39 +37,7 @@ export const PatientRegistrationPage: React.FC = () => {
   };
 
   const validate = (): boolean => {
-    const errors: FieldErrors = {};
-    const requiredFields: Array<keyof PatientForm> = [
-      'nic',
-      'firstName',
-      'lastName',
-      'dateOfBirth',
-      'gender',
-      'email',
-      'phone',
-      'addressLine1',
-      'district',
-    ];
-
-    requiredFields.forEach((field) => {
-      if (!form[field]?.trim()) errors[field] = 'This field is required.';
-    });
-
-    if (form.nic && !NIC_PATTERN.test(normalizeNic(form.nic))) {
-      errors.nic = 'Enter 12 digits, or 9 digits followed by V or X.';
-    }
-    if (form.dateOfBirth && form.dateOfBirth > today) {
-      errors.dateOfBirth = 'Date of birth cannot be in the future.';
-    }
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      errors.email = 'Enter a valid email address.';
-    }
-    if (form.phone && !PHONE_PATTERN.test(normalizePhone(form.phone))) {
-      errors.phone = 'Use a Sri Lankan number such as 0771234567 or +94771234567.';
-    }
-    if (form.emergencyContactPhone && !PHONE_PATTERN.test(normalizePhone(form.emergencyContactPhone))) {
-      errors.emergencyContactPhone = 'Enter a valid Sri Lankan phone number.';
-    }
-
+    const errors = validatePatientForm(form, today);
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -112,21 +51,7 @@ export const PatientRegistrationPage: React.FC = () => {
     setDuplicate(null);
     setRegistered(null);
 
-    const body: CreatePatientBody = {
-      ...form,
-      nic: normalizeNic(form.nic),
-      firstName: form.firstName.trim(),
-      lastName: form.lastName.trim(),
-      email: form.email.trim().toLowerCase(),
-      phone: normalizePhone(form.phone),
-      addressLine1: form.addressLine1.trim(),
-      addressLine2: form.addressLine2?.trim() || undefined,
-      district: form.district.trim(),
-      emergencyContactName: form.emergencyContactName?.trim() || undefined,
-      emergencyContactPhone: form.emergencyContactPhone
-        ? normalizePhone(form.emergencyContactPhone)
-        : undefined,
-    };
+    const body: CreatePatientBody = normalizePatientForm(form);
 
     try {
       const patient = await patientApi.register(body);
@@ -135,7 +60,7 @@ export const PatientRegistrationPage: React.FC = () => {
       if (isDuplicatePatientError(error) && axios.isAxiosError<DuplicatePatientResponse>(error)) {
         setDuplicate(error.response?.data ?? null);
       } else if (isValidationProblem(error) && axios.isAxiosError<ValidationProblemResponse>(error)) {
-        setFieldErrors(firstError(error.response?.data.errors));
+        setFieldErrors(mapValidationErrors(error.response?.data.errors));
         setRequestError(error.response?.data.title ?? 'Please correct the highlighted fields.');
       } else if (axios.isAxiosError(error) && error.response?.status === 403) {
         setRequestError('You do not have permission to register patients.');
@@ -148,7 +73,7 @@ export const PatientRegistrationPage: React.FC = () => {
   };
 
   const registerAnother = () => {
-    setForm(EMPTY_FORM);
+    setForm(EMPTY_PATIENT_FORM);
     setFieldErrors({});
     setRegistered(null);
     setDuplicate(null);
@@ -172,6 +97,9 @@ export const PatientRegistrationPage: React.FC = () => {
           <button type="button" className="btn btn-primary" onClick={registerAnother}>
             Register another patient
           </button>
+          <button type="button" className="btn btn-outline" onClick={() => navigate(`/patients/${registered.patientId}`)}>
+            View patient profile
+          </button>
         </section>
       )}
 
@@ -187,6 +115,13 @@ export const PatientRegistrationPage: React.FC = () => {
           <p className="existing-patient-help">
             Use this existing patient number when booking the appointment; no duplicate record was created.
           </p>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => navigate(`/patients/${duplicate.existingPatient.patientId}`)}
+          >
+            View existing patient
+          </button>
         </section>
       )}
 

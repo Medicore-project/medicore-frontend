@@ -23,6 +23,16 @@ export interface PatientRegistrationResponse extends CreatePatientBody {
   createdAt: string;
 }
 
+export interface PatientProfileResponse extends CreatePatientBody {
+  patientId: string;
+  patientNumber: string;
+  fullName: string;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export type UpdatePatientBody = Omit<CreatePatientBody, 'nic'>;
+
 export interface ExistingPatientSummary {
   patientId: string;
   patientNumber: string;
@@ -46,6 +56,19 @@ export const patientApi = {
     apiClient
       .post<PatientRegistrationResponse>('/patient/api/patients', body)
       .then((response) => response.data),
+
+  getById: (patientId: string): Promise<PatientProfileResponse> =>
+    apiClient
+      .get<PatientProfileResponse>(`/patient/api/patients/${patientId}`)
+      .then((response) => response.data),
+
+  update: (patientId: string, body: UpdatePatientBody): Promise<PatientProfileResponse> =>
+    apiClient
+      .put<PatientProfileResponse>(`/patient/api/patients/${patientId}`, body)
+      .then((response) => response.data),
+
+  remove: (patientId: string): Promise<void> =>
+    apiClient.delete(`/patient/api/patients/${patientId}`).then(() => undefined),
 };
 
 export function isDuplicatePatientError(error: unknown): boolean {

@@ -8,6 +8,7 @@ import StaffListPage from './pages/StaffListPage';
 import StaffDetailPage from './pages/StaffDetailPage';
 import AuditReportPage from './pages/AuditReportPage';
 import PatientRegistrationPage from './pages/PatientRegistrationPage';
+import PatientProfilePage from './pages/PatientProfilePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 
@@ -34,6 +35,7 @@ export const App: React.FC = () => {
         <Route element={<AppLayout />}>
           <Route path="/patients" element={<PatientRegistrationPage />} />
           <Route path="/patients/register" element={<Navigate to="/patients" replace />} />
+          <Route path="/patients/:id" element={<PatientProfilePage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
