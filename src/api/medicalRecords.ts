@@ -32,7 +32,7 @@ export interface MedicalRecordMetadata {
   visitReference: string;
   authorClinicianId: string;
   authorClinicianEmail: string;
-  authorClinicianRole: 'Doctor' | 'Nurse';
+  authorClinicianRole: 'Doctor' | 'Nurse' | 'System';
   authoredAtUtc: string;
   version: number;
 }

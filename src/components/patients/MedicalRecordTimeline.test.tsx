@@ -47,6 +47,26 @@ describe('MedicalRecordTimeline', () => {
       '/patients/patient-26/records/newer-record',
     );
   });
+
+  it('identifies a system-authored entry as an imported completed appointment', () => {
+    const imported = {
+      ...summary('imported-record', '2026-09-14T05:00:00Z', 'Appointment completion notes'),
+      authorClinicianId: 'appointment-service',
+      authorClinicianEmail: 'appointment-service@internal',
+      authorClinicianRole: 'System' as const,
+      version: 1,
+    };
+
+    render(
+      <MemoryRouter>
+        <MedicalRecordTimeline patientId="patient-26" records={[imported]} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Imported visit · v1')).toBeInTheDocument();
+    expect(screen.getByText('Completed appointment')).toBeInTheDocument();
+    expect(screen.getByText(imported.visitReference)).toBeInTheDocument();
+  });
 });
 
 describe('MedicalRecordVersionTimeline', () => {
