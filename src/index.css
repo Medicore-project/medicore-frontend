@@ -1814,6 +1814,168 @@ details[open] .rx-history-summary::before {
   }
 }
 
+/* ── Demographics and visit-history report ────────────────────────────────── */
+
+.demographics-report-page {
+  max-width: 1400px;
+}
+
+.demographics-export-actions,
+.demographics-filter-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.demographics-filter-panel {
+  padding: 20px;
+}
+
+.demographics-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.demographics-filter-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.demographics-report-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -6px 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.demographics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.demographics-kpi-card {
+  padding: 18px 20px;
+  border-top: 3px solid var(--primary);
+}
+
+.demographics-kpi-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.demographics-kpi-card strong {
+  color: var(--text-main);
+  font-size: 28px;
+}
+
+.demographics-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.demographics-chart-card {
+  min-width: 0;
+  padding: 20px;
+}
+
+.demographics-section-heading h2 {
+  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.demographics-section-heading p {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.demographics-chart {
+  width: 100%;
+  height: 290px;
+  margin-top: 18px;
+}
+
+.demographics-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.demographics-table-heading {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.demographics-date-cell {
+  white-space: nowrap;
+}
+
+.demographics-loading,
+.demographics-empty-result {
+  min-height: 180px;
+}
+
+@media (max-width: 1080px) {
+  .demographics-filter-grid {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+
+  .demographics-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .demographics-report-header,
+  .demographics-report-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .demographics-export-actions {
+    width: 100%;
+  }
+
+  .demographics-export-actions .btn {
+    flex: 1;
+  }
+
+  .demographics-filter-grid,
+  .demographics-chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .demographics-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .demographics-filter-actions {
+    flex-direction: column-reverse;
+  }
+
+  .demographics-filter-actions .btn {
+    width: 100%;
+  }
+}
+
 /* ── Allergy banner ─────────────────────────────────────────────────────────── */
 
 .allergy-banner {
@@ -2004,4 +2166,3 @@ details[open] .rx-history-summary::before {
     flex-direction: column;
   }
 }
-

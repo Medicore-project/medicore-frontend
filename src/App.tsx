@@ -7,6 +7,7 @@ import SpecializationsPage from './pages/SpecializationsPage';
 import StaffListPage from './pages/StaffListPage';
 import StaffDetailPage from './pages/StaffDetailPage';
 import AuditReportPage from './pages/AuditReportPage';
+import DemographicsReportPage from './pages/DemographicsReportPage';
 import PatientRegistrationPage from './pages/PatientRegistrationPage';
 import PatientProfilePage from './pages/PatientProfilePage';
 import PatientSearchPage from './pages/PatientSearchPage';
@@ -39,6 +40,7 @@ export const App: React.FC = () => {
           <Route path="/staff" element={<StaffListPage />} />
           <Route path="/staff/:id" element={<StaffDetailPage />} />
           <Route path="/reports/audit" element={<AuditReportPage />} />
+          <Route path="/reports/demographics" element={<DemographicsReportPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[...PATIENT_READER_ROLES]} />}>
