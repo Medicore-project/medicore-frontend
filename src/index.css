@@ -1814,3 +1814,194 @@ details[open] .rx-history-summary::before {
   }
 }
 
+/* ── Allergy banner ─────────────────────────────────────────────────────────── */
+
+.allergy-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 1.5px solid #fca5a5;
+  border-left: 5px solid #dc2626;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  animation: banner-slide-in 0.25s ease;
+}
+
+@keyframes banner-slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.allergy-banner--severe {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #ef4444;
+  border-left-color: #b91c1c;
+}
+
+.allergy-banner--compact {
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+}
+
+.allergy-banner-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  color: #dc2626;
+}
+
+.allergy-banner--compact .allergy-banner-icon {
+  font-size: 16px;
+}
+
+.allergy-banner-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.allergy-banner-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #991b1b;
+  margin: 0 0 10px;
+}
+
+.allergy-banner--compact .allergy-banner-title {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.allergy-banner-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.allergy-banner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #fff;
+  border: 1.5px solid currentColor;
+  cursor: default;
+}
+
+.allergy-chip-severity {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+/* Per-severity chip colours */
+.allergy-chip--severe   { color: #b91c1c; border-color: #fca5a5; background: #fff1f2; }
+.allergy-chip--moderate { color: #c2410c; border-color: #fdba74; background: #fff7ed; }
+.allergy-chip--mild     { color: #a16207; border-color: #fde047; background: #fefce8; }
+.allergy-chip--unknown  { color: #64748b; border-color: #cbd5e1; background: #f8fafc; }
+
+/* ── Severity badges (allergy page) ─────────────────────────────────────────── */
+
+.allergy-severity-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.badge-severity-severe   { background: #fee2e2; color: #b91c1c; }
+.badge-severity-moderate { background: #ffedd5; color: #c2410c; }
+.badge-severity-mild     { background: #fef9c3; color: #a16207; }
+.badge-severity-unknown  { background: #f1f5f9; color: #64748b; }
+
+/* badge-inactive — used by allergy history counter chip */
+.badge-inactive {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* ── Allergy form modal ──────────────────────────────────────────────────────── */
+
+.allergy-modal {
+  max-width: 580px;
+}
+
+.allergy-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Allergy conflict warning (inside PrescriptionFormModal) ─────────────────── */
+
+.allergy-conflict-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #f59e0b;
+  border-left: 5px solid #d97706;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  animation: banner-slide-in 0.2s ease;
+}
+
+.conflict-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.conflict-warning-icon {
+  font-size: 18px;
+  color: #d97706;
+}
+
+.conflict-warning-header strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.conflict-warning-body {
+  font-size: 13px;
+  color: #78350f;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.conflict-warning-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Allergy card (overrides for allergy page) ───────────────────────────────── */
+
+.allergy-card .rx-card-drug {
+  gap: 8px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .allergy-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .allergy-banner-chips {
+    gap: 6px;
+  }
+
+  .conflict-warning-actions {
+    flex-direction: column;
+  }
+}
+
