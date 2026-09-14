@@ -111,6 +111,7 @@ export const PatientProfilePage: React.FC = () => {
         </div>
         <div className="profile-actions">
           <Link className="btn btn-primary" to={`/patients/${patient.patientId}/records`}>Medical records</Link>
+          <Link className="btn btn-outline" to={`/patients/${patient.patientId}/prescriptions`}>Prescriptions</Link>
           {canManagePatients && (
             <>
               <button type="button" className="btn btn-outline" onClick={() => setIsEditing(true)}>Edit profile</button>
