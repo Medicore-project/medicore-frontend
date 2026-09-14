@@ -1,5 +1,5 @@
 import axios from 'axios';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   medicalRecordApi,
@@ -9,9 +9,11 @@ import {
 import MedicalRecordFormModal from '../components/patients/MedicalRecordFormModal';
 import MedicalRecordTimeline from '../components/patients/MedicalRecordTimeline';
 import { useAuth } from '../contexts/AuthContext';
+import { countNewMedicalRecords, mergeRefreshedMedicalRecords } from '../utils/medicalRecordTimeline';
 import { canWriteMedicalRecords } from '../utils/permissions';
 
 const PAGE_SIZE = 10;
+const TIMELINE_REFRESH_INTERVAL_MS = 30_000;
 
 export const PatientMedicalRecordsPage: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
@@ -20,34 +22,69 @@ export const PatientMedicalRecordsPage: React.FC = () => {
   const [result, setResult] = useState<PagedMedicalRecordResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const resultRef = useRef<PagedMedicalRecordResponse | null>(null);
+  const refreshInFlightRef = useRef(false);
 
-  const loadRecords = useCallback(async (requestedPage = 1, append = false) => {
+  const loadRecords = useCallback(async (requestedPage = 1, append = false, background = false) => {
     if (!patientId) {
-      setError('Invalid patient identifier.');
-      setIsLoading(false);
+      if (!background) {
+        setError('Invalid patient identifier.');
+        setIsLoading(false);
+      }
       return;
     }
 
-    if (append) setIsLoadingMore(true);
-    else setIsLoading(true);
-    setError(null);
+    if (background) {
+      if (refreshInFlightRef.current) return;
+      refreshInFlightRef.current = true;
+      setIsRefreshing(true);
+      setRefreshError(null);
+    } else {
+      if (append) setIsLoadingMore(true);
+      else setIsLoading(true);
+      setError(null);
+    }
+
     try {
       const response = await medicalRecordApi.list(patientId, {
         page: requestedPage,
         pageSize: PAGE_SIZE,
       });
-      setResult((current) => {
-        if (!append || !current) return response;
 
-        const recordsById = new Map(current.items.map((record) => [record.recordId, record]));
-        response.items.forEach((record) => recordsById.set(record.recordId, record));
-        return { ...response, items: [...recordsById.values()] };
+      if (background) {
+        const newRecordCount = countNewMedicalRecords(resultRef.current, response);
+        if (newRecordCount > 0) {
+          setRefreshMessage(
+            `Timeline updated with ${newRecordCount} new completed appointment${newRecordCount === 1 ? '' : 's'}.`,
+          );
+        }
+      }
+
+      setResult((current) => {
+        let next: PagedMedicalRecordResponse;
+        if (background) {
+          next = mergeRefreshedMedicalRecords(current, response);
+        } else if (!append || !current) {
+          next = response;
+        } else {
+          const recordsById = new Map(current.items.map((record) => [record.recordId, record]));
+          response.items.forEach((record) => recordsById.set(record.recordId, record));
+          next = { ...response, items: [...recordsById.values()] };
+        }
+
+        resultRef.current = next;
+        return next;
       });
     } catch (requestError: unknown) {
-      if (axios.isAxiosError(requestError) && requestError.response?.status === 404) {
+      if (background) {
+        setRefreshError('Automatic timeline refresh failed. Existing records are still available.');
+      } else if (axios.isAxiosError(requestError) && requestError.response?.status === 404) {
         setError('Patient not found or the profile has been deleted.');
       } else if (axios.isAxiosError(requestError) && requestError.response?.status === 403) {
         setError('You do not have permission to view this patient’s medical records.');
@@ -55,7 +92,10 @@ export const PatientMedicalRecordsPage: React.FC = () => {
         setError('Failed to load medical records.');
       }
     } finally {
-      if (append) setIsLoadingMore(false);
+      if (background) {
+        refreshInFlightRef.current = false;
+        setIsRefreshing(false);
+      } else if (append) setIsLoadingMore(false);
       else setIsLoading(false);
     }
   }, [patientId]);
@@ -63,6 +103,25 @@ export const PatientMedicalRecordsPage: React.FC = () => {
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- route and page changes load the matching records
     void loadRecords(1);
+  }, [loadRecords]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadRecords(1, false, true);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshWhenVisible();
+    };
+
+    const refreshTimer = window.setInterval(refreshWhenVisible, TIMELINE_REFRESH_INTERVAL_MS);
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(refreshTimer);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadRecords]);
 
   const handleCreated = (record: MedicalRecordResponse) => {
@@ -95,6 +154,13 @@ export const PatientMedicalRecordsPage: React.FC = () => {
       )}
 
       <section className="detail-card medical-timeline-section">
+        {(isRefreshing || refreshMessage || refreshError) && (
+          <div className={`timeline-refresh-status${refreshError ? ' timeline-refresh-error' : ''}`} role="status">
+            {isRefreshing
+              ? 'Checking for completed appointments…'
+              : refreshError ?? refreshMessage}
+          </div>
+        )}
         {isLoading ? (
           <div className="table-loading"><div className="spinner" /><p>Loading medical records…</p></div>
         ) : result && result.items.length > 0 ? (

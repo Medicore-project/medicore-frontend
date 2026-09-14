@@ -1105,6 +1105,16 @@ body {
   font-size: 13px;
 }
 
+.timeline-refresh-status {
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.timeline-refresh-error {
+  color: var(--error-text);
+}
+
 .medical-record-timeline {
   position: relative;
   display: flex;
