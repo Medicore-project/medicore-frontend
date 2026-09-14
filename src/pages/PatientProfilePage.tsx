@@ -2,6 +2,7 @@ import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { patientApi, type PatientProfileResponse } from '../api/patients';
+import AllergyBanner from '../components/patients/AllergyBanner';
 import PatientEditModal from '../components/patients/PatientEditModal';
 import { useAuth } from '../contexts/AuthContext';
 import { canManagePatientProfiles } from '../utils/permissions';
@@ -112,6 +113,7 @@ export const PatientProfilePage: React.FC = () => {
         <div className="profile-actions">
           <Link className="btn btn-primary" to={`/patients/${patient.patientId}/records`}>Medical records</Link>
           <Link className="btn btn-outline" to={`/patients/${patient.patientId}/prescriptions`}>Prescriptions</Link>
+          <Link className="btn btn-danger-outline" to={`/patients/${patient.patientId}/allergies`}>Allergies</Link>
           {canManagePatients && (
             <>
               <button type="button" className="btn btn-outline" onClick={() => setIsEditing(true)}>Edit profile</button>
@@ -130,6 +132,9 @@ export const PatientProfilePage: React.FC = () => {
           <button type="button" className="alert-close" onClick={() => setSuccessMessage(null)}>×</button>
         </div>
       )}
+
+      {/* Allergy banner — shows only when active allergies exist */}
+      <AllergyBanner patientId={patient.patientId} />
 
       <section className="detail-card">
         <h2 className="detail-section-title">Identity and personal details</h2>

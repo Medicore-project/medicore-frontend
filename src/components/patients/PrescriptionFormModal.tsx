@@ -6,6 +6,7 @@ import {
   type PrescriptionResponse,
   type UpdatePrescriptionBody,
 } from '../../api/prescriptions';
+import { allergyApi, type AllergyResponse } from '../../api/allergies';
 
 interface PrescriptionFormModalProps {
   patientId: string;
@@ -43,9 +44,18 @@ export const PrescriptionFormModal: React.FC<PrescriptionFormModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Allergy conflict warning state
+  const [conflictAllergy, setConflictAllergy] = useState<AllergyResponse | null>(null);
+  const [pendingBody, setPendingBody] = useState<CreatePrescriptionBody | null>(null);
+
   const set = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setError(null);
+    // Clear conflict warning when drug field changes
+    if (field === 'drug') {
+      setConflictAllergy(null);
+      setPendingBody(null);
+    }
   };
 
   // ── Validation ──────────────────────────────────────────────────────────────
@@ -66,7 +76,51 @@ export const PrescriptionFormModal: React.FC<PrescriptionFormModalProps> = ({
     return null;
   };
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  // ── Submit helpers ──────────────────────────────────────────────────────────
+
+  /** Final API call — used both on first attempt and after override confirmation. */
+  const doCreate = async (body: CreatePrescriptionBody): Promise<void> => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const saved = await prescriptionApi.create(patientId, body);
+      onSuccess(saved);
+    } catch (requestError: unknown) {
+      if (axios.isAxiosError(requestError)) {
+        if (requestError.response?.status === 409) {
+          // Server-side conflict guard triggered (shouldn't normally reach here
+          // because we run the client-side preflight, but handle it gracefully)
+          setError(
+            'An allergy conflict was detected by the server. Please review the patient allergies before prescribing.',
+          );
+        } else {
+          mapAxiosError(requestError.response?.status);
+        }
+      } else {
+        setError('Failed to save the prescription. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const mapAxiosError = (status?: number) => {
+    switch (status) {
+      case 400:
+        setError('Some prescription details are invalid. Check the form and try again.');
+        break;
+      case 403:
+        setError('You do not have permission to write prescriptions.');
+        break;
+      case 404:
+        setError('The patient or prescription no longer exists.');
+        break;
+      default:
+        setError('Failed to save the prescription. Please try again.');
+    }
+  };
+
+  // ── Main submit ─────────────────────────────────────────────────────────────
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -76,17 +130,14 @@ export const PrescriptionFormModal: React.FC<PrescriptionFormModalProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
-    setError(null);
-
     const durationDays = Number(form.durationDays);
     const notes = form.notes.trim() || null;
 
-    try {
-      let saved: PrescriptionResponse;
-
-      if (prescription) {
-        // UPDATE — only mutable fields
+    if (prescription) {
+      // EDIT — no conflict check on update
+      setIsSubmitting(true);
+      setError(null);
+      try {
         const body: UpdatePrescriptionBody = {
           drug: form.drug.trim(),
           dosage: form.dosage.trim(),
@@ -94,41 +145,60 @@ export const PrescriptionFormModal: React.FC<PrescriptionFormModalProps> = ({
           durationDays,
           notes,
         };
-        saved = await prescriptionApi.update(patientId, prescription.prescriptionId, body);
-      } else {
-        // CREATE
-        const body: CreatePrescriptionBody = {
-          drug: form.drug.trim(),
-          dosage: form.dosage.trim(),
-          frequency: form.frequency.trim(),
-          durationDays,
-          notes,
-        };
-        saved = await prescriptionApi.create(patientId, body);
-      }
-
-      onSuccess(saved);
-    } catch (requestError: unknown) {
-      if (axios.isAxiosError(requestError)) {
-        switch (requestError.response?.status) {
-          case 400:
-            setError('Some prescription details are invalid. Check the form and try again.');
-            break;
-          case 403:
-            setError('You do not have permission to write prescriptions.');
-            break;
-          case 404:
-            setError('The patient or prescription no longer exists.');
-            break;
-          default:
-            setError('Failed to save the prescription. Please try again.');
+        const saved = await prescriptionApi.update(patientId, prescription.prescriptionId, body);
+        onSuccess(saved);
+      } catch (requestError: unknown) {
+        if (axios.isAxiosError(requestError)) {
+          mapAxiosError(requestError.response?.status);
+        } else {
+          setError('Failed to save the prescription. Please try again.');
         }
-      } else {
-        setError('Failed to save the prescription. Please try again.');
+      } finally {
+        setIsSubmitting(false);
       }
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+
+    // CREATE — run client-side conflict pre-flight
+    setIsSubmitting(true);
+    setError(null);
+
+    const body: CreatePrescriptionBody = {
+      drug: form.drug.trim(),
+      dosage: form.dosage.trim(),
+      frequency: form.frequency.trim(),
+      durationDays,
+      notes,
+    };
+
+    try {
+      const conflictCheck = await allergyApi.checkConflict(patientId, body.drug);
+
+      if (conflictCheck.hasConflict && conflictCheck.matchedAllergy) {
+        // Show inline conflict warning — don't submit yet
+        setConflictAllergy(conflictCheck.matchedAllergy);
+        setPendingBody(body);
+        setIsSubmitting(false);
+        return;
+      }
+    } catch {
+      // If the conflict check itself fails, proceed without blocking — server will
+      // act as the final safety net
+    }
+
+    await doCreate(body);
+  };
+
+  /** Doctor clicked "Prescribe anyway" — resend with overrideConflict: true */
+  const handleOverride = async () => {
+    if (!pendingBody) return;
+    setConflictAllergy(null);
+    await doCreate({ ...pendingBody, overrideConflict: true });
+  };
+
+  const handleCancelOverride = () => {
+    setConflictAllergy(null);
+    setPendingBody(null);
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -154,9 +224,45 @@ export const PrescriptionFormModal: React.FC<PrescriptionFormModalProps> = ({
           noValidate
           aria-labelledby="prescription-modal-title"
         >
+          {/* Generic error */}
           {error && (
             <div className="alert alert-danger" role="alert">
               {error}
+            </div>
+          )}
+
+          {/* ── Allergy conflict warning ────────────────────────────────────── */}
+          {conflictAllergy && (
+            <div className="allergy-conflict-warning" role="alert" aria-live="assertive">
+              <div className="conflict-warning-header">
+                <span className="conflict-warning-icon" aria-hidden="true">⚠</span>
+                <strong>Allergy conflict detected</strong>
+              </div>
+              <p className="conflict-warning-body">
+                This patient has a recorded{' '}
+                <strong>{conflictAllergy.severity.toLowerCase()}</strong> allergy to{' '}
+                <strong>{conflictAllergy.allergen}</strong>.
+                {conflictAllergy.reaction && (
+                  <> Observed reaction: <em>{conflictAllergy.reaction}</em>.</>
+                )}
+              </p>
+              <div className="conflict-warning-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleCancelOverride}
+                >
+                  Cancel — do not prescribe
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={handleOverride}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Saving…' : 'Prescribe anyway'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -244,8 +350,12 @@ export const PrescriptionFormModal: React.FC<PrescriptionFormModalProps> = ({
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving…' : isEditing ? 'Save changes' : 'Add prescription'}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSubmitting || Boolean(conflictAllergy)}
+            >
+              {isSubmitting ? 'Checking…' : isEditing ? 'Save changes' : 'Add prescription'}
             </button>
           </div>
         </form>

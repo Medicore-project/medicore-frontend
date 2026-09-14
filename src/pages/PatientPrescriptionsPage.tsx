@@ -5,6 +5,7 @@ import { prescriptionApi, type PrescriptionResponse } from '../api/prescriptions
 import { useAuth } from '../contexts/AuthContext';
 import { canWritePrescriptions } from '../utils/prescriptionPermissions';
 import PrescriptionFormModal from '../components/patients/PrescriptionFormModal';
+import AllergyBanner from '../components/patients/AllergyBanner';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 
@@ -327,6 +328,9 @@ export const PrescriptionsPanel: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Compact allergy banner — shows at point of prescribing */}
+      {patientId && <AllergyBanner patientId={patientId} compact />}
 
       {/* Active prescriptions */}
       <section className="card" aria-labelledby="active-rx-heading">

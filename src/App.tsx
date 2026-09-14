@@ -13,6 +13,7 @@ import PatientSearchPage from './pages/PatientSearchPage';
 import PatientMedicalRecordsPage from './pages/PatientMedicalRecordsPage';
 import MedicalRecordDetailPage from './pages/MedicalRecordDetailPage';
 import PatientPrescriptionsPage from './pages/PatientPrescriptionsPage';
+import PatientAllergiesPage from './pages/PatientAllergiesPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import { FRONT_DESK_ROLES, PATIENT_READER_ROLES } from './utils/permissions';
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
           <Route path="/patients/:patientId/records" element={<PatientMedicalRecordsPage />} />
           <Route path="/patients/:patientId/records/:recordId" element={<MedicalRecordDetailPage />} />
           <Route path="/patients/:patientId/prescriptions" element={<PatientPrescriptionsPage />} />
+          <Route path="/patients/:patientId/allergies" element={<PatientAllergiesPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>

@@ -33,6 +33,8 @@ export interface CreatePrescriptionBody {
   durationDays: number;
   medicalRecordId?: string | null;
   notes?: string | null;
+  /** Set to true to bypass the allergy conflict guard after clinician confirmation. */
+  overrideConflict?: boolean;
 }
 
 export interface UpdatePrescriptionBody {
