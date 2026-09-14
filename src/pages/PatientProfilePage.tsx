@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { patientApi, type PatientProfileResponse } from '../api/patients';
 import PatientEditModal from '../components/patients/PatientEditModal';
+import { useAuth } from '../contexts/AuthContext';
+import { canManagePatientProfiles } from '../utils/permissions';
 
 function formatDate(value?: string | null): string {
   if (!value) return '—';
@@ -11,6 +13,8 @@ function formatDate(value?: string | null): string {
 
 export const PatientProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const canManagePatients = canManagePatientProfiles(user?.role);
   const location = useLocation();
   const patientSearch = (location.state as { patientSearch?: string } | null)?.patientSearch;
   const patientsPath = patientSearch ? `/patients?${patientSearch}` : '/patients';
@@ -106,10 +110,15 @@ export const PatientProfilePage: React.FC = () => {
           <p className="page-subtitle">Patient number: <strong>{patient.patientNumber}</strong></p>
         </div>
         <div className="profile-actions">
-          <button type="button" className="btn btn-outline" onClick={() => setIsEditing(true)}>Edit profile</button>
-          <button type="button" className="btn btn-danger-outline" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? 'Deleting…' : 'Delete patient'}
-          </button>
+          <Link className="btn btn-primary" to={`/patients/${patient.patientId}/records`}>Medical records</Link>
+          {canManagePatients && (
+            <>
+              <button type="button" className="btn btn-outline" onClick={() => setIsEditing(true)}>Edit profile</button>
+              <button type="button" className="btn btn-danger-outline" onClick={handleDelete} disabled={isDeleting}>
+                {isDeleting ? 'Deleting…' : 'Delete patient'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -153,7 +162,7 @@ export const PatientProfilePage: React.FC = () => {
         Created {formatDate(patient.createdAt)} · Last updated {formatDate(patient.updatedAt)}
       </p>
 
-      {isEditing && (
+      {canManagePatients && isEditing && (
         <PatientEditModal
           patient={patient}
           onClose={() => setIsEditing(false)}

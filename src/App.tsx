@@ -10,8 +10,11 @@ import AuditReportPage from './pages/AuditReportPage';
 import PatientRegistrationPage from './pages/PatientRegistrationPage';
 import PatientProfilePage from './pages/PatientProfilePage';
 import PatientSearchPage from './pages/PatientSearchPage';
+import PatientMedicalRecordsPage from './pages/PatientMedicalRecordsPage';
+import MedicalRecordDetailPage from './pages/MedicalRecordDetailPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
+import { FRONT_DESK_ROLES, PATIENT_READER_ROLES } from './utils/permissions';
 
 export const App: React.FC = () => {
   return (
@@ -21,6 +24,8 @@ export const App: React.FC = () => {
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/patients/:patientId/records" element={<PatientMedicalRecordsPage />} />
+          <Route path="/patients/:patientId/records/:recordId" element={<MedicalRecordDetailPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
@@ -32,11 +37,15 @@ export const App: React.FC = () => {
           <Route path="/reports/audit" element={<AuditReportPage />} />
         </Route>
       </Route>
-      <Route element={<ProtectedRoute allowedRoles={['Admin', 'Receptionist']} />}>
+      <Route element={<ProtectedRoute allowedRoles={[...PATIENT_READER_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/patients" element={<PatientSearchPage />} />
-          <Route path="/patients/register" element={<PatientRegistrationPage />} />
           <Route path="/patients/:id" element={<PatientProfilePage />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/patients/register" element={<PatientRegistrationPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

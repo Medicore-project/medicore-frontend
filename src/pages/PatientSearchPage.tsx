@@ -2,6 +2,8 @@ import axios from 'axios';
 import React, { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { patientApi, type PatientSearchResult } from '../api/patients';
+import { useAuth } from '../contexts/AuthContext';
+import { canManagePatientProfiles } from '../utils/permissions';
 
 const PAGE_SIZE = 20;
 
@@ -17,6 +19,8 @@ function formatDate(value: string): string {
 
 export const PatientSearchPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canManagePatients = canManagePatientProfiles(user?.role);
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q')?.trim() ?? '';
   const page = readPage(searchParams.get('page'));
@@ -118,9 +122,11 @@ export const PatientSearchPage: React.FC = () => {
           <h1>Patient Search</h1>
           <p className="page-subtitle">Find an active patient by name, NIC or patient number.</p>
         </div>
-        <Link className="btn btn-primary" to="/patients/register">
-          + Register Patient
-        </Link>
+        {canManagePatients && (
+          <Link className="btn btn-primary" to="/patients/register">
+            + Register Patient
+          </Link>
+        )}
       </div>
 
       <form className="card patient-search-bar" role="search" onSubmit={handleSubmit}>
@@ -166,7 +172,9 @@ export const PatientSearchPage: React.FC = () => {
         ) : items.length === 0 ? (
           <div className="table-empty">
             <p>No patients found.</p>
-            <span>Check the search details or register a new patient.</span>
+            <span>
+              {canManagePatients ? 'Check the search details or register a new patient.' : 'Check the search details and try again.'}
+            </span>
           </div>
         ) : (
           <div className="table-responsive">
