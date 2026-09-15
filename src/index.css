@@ -817,3 +817,1352 @@ body {
   color: var(--text-main);
 }
 
+.patient-registration-page {
+  max-width: 920px;
+}
+
+.patient-search-page {
+  max-width: 1200px;
+}
+
+.patient-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.patient-search-bar .filter-search {
+  flex: 1;
+}
+
+.patient-search-summary {
+  margin: -8px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.patient-number-small {
+  white-space: nowrap;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.patient-search-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.patient-search-actions,
+.patient-search-actions-heading {
+  text-align: right;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.patient-registration-form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.patient-registration-form fieldset {
+  border: 0;
+  min-width: 0;
+}
+
+.patient-registration-form legend {
+  width: 100%;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.patient-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.patient-field-full {
+  grid-column: 1 / -1;
+}
+
+.patient-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-color);
+}
+
+.registration-result {
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.registration-success {
+  color: var(--success-text);
+  background-color: var(--success-bg);
+  border-color: var(--success-border);
+}
+
+.registration-duplicate {
+  color: #92400e;
+  background-color: #fffbeb;
+  border-color: #fde68a;
+}
+
+.registration-result-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.patient-number {
+  font-size: 28px;
+  letter-spacing: 0.04em;
+}
+
+.registration-result .btn {
+  margin-top: 8px;
+}
+
+.existing-patient-help,
+.archived-notice {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.archived-notice {
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .content-area {
+    padding: 18px;
+  }
+
+  .patient-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-field-full {
+    grid-column: auto;
+  }
+
+  .patient-search-page .page-header,
+  .patient-search-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.patient-profile-page {
+  max-width: 960px;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.profile-breadcrumb {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.profile-breadcrumb:hover {
+  text-decoration: underline;
+}
+
+.patient-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+
+.patient-profile-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.patient-profile-grid span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.patient-profile-grid strong {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.profile-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.profile-back-link {
+  align-self: flex-start;
+}
+
+.patient-edit-modal {
+  max-width: 760px;
+}
+
+@media (max-width: 720px) {
+  .patient-profile-page .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .profile-actions {
+    width: 100%;
+  }
+
+  .profile-actions .btn {
+    flex: 1;
+  }
+
+  .patient-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.medical-records-page,
+.medical-record-detail-page {
+  max-width: 1180px;
+}
+
+.table-secondary-text {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.medical-records-page code,
+.medical-record-detail-page code {
+  color: #475569;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.medical-record-modal {
+  max-width: 860px;
+}
+
+.medical-timeline-section {
+  padding: 24px;
+}
+
+.medical-timeline-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.medical-timeline-heading h2 {
+  color: var(--text-main);
+  font-size: 18px;
+}
+
+.medical-timeline-heading p {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.timeline-refresh-status {
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.timeline-refresh-error {
+  color: var(--error-text);
+}
+
+.medical-record-timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 0;
+  padding: 0 0 0 34px;
+  list-style: none;
+}
+
+.medical-record-timeline::before {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 8px;
+  width: 2px;
+  background: #dbeafe;
+  content: '';
+}
+
+.medical-timeline-entry {
+  position: relative;
+}
+
+.medical-timeline-marker {
+  position: absolute;
+  top: 22px;
+  left: -33px;
+  width: 16px;
+  height: 16px;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  background-color: var(--primary);
+  box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+.medical-timeline-card {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.medical-timeline-header,
+.medical-timeline-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+}
+
+.medical-timeline-header {
+  border-bottom: 1px solid var(--border-color);
+  background-color: #f8fafc;
+}
+
+.medical-timeline-header time {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.medical-timeline-header div > span {
+  margin-left: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.medical-timeline-preview {
+  padding: 18px;
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.medical-timeline-metadata {
+  display: grid;
+  grid-template-columns: 1.5fr 0.7fr 0.6fr 1.8fr;
+  gap: 14px;
+  margin: 0;
+  padding: 0 18px 18px;
+}
+
+.medical-timeline-metadata div {
+  min-width: 0;
+}
+
+.medical-timeline-metadata dt,
+.version-metadata dt {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.medical-timeline-metadata dd,
+.version-metadata dd {
+  margin: 4px 0 0;
+  color: var(--text-main);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.medical-timeline-footer {
+  border-top: 1px solid var(--border-color);
+}
+
+.medical-timeline-footer > span {
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.timeline-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-color);
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: var(--text-main);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.form-group textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.field-help {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.condition-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.condition-section-header,
+.record-card-header,
+.condition-card > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.condition-section-header h3 {
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.condition-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.condition-editor {
+  position: relative;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.condition-editor legend {
+  padding: 0 6px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.condition-fields {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.condition-notes-field {
+  grid-column: 1 / -1;
+}
+
+.record-card-header time,
+.version-timeline time {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.record-card-header .detail-section-title {
+  margin-top: 12px;
+}
+
+.clinical-notes {
+  margin: 8px 0 22px;
+  color: var(--text-main);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.record-metadata {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.record-metadata div {
+  min-width: 0;
+}
+
+.record-metadata dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.record-metadata dd {
+  margin: 5px 0 0;
+  color: var(--text-main);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.condition-list,
+.version-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.condition-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.condition-card > div {
+  justify-content: flex-start;
+}
+
+.condition-card p {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.condition-card code {
+  margin-left: 10px;
+}
+
+.condition-status-active {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.condition-status-resolved {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.condition-status-historical {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.version-timeline {
+  margin-top: 16px;
+  padding-left: 30px;
+  list-style: none;
+}
+
+.version-timeline-entry {
+  position: relative;
+}
+
+.version-timeline-entry::before {
+  position: absolute;
+  top: 20px;
+  bottom: -30px;
+  left: -22px;
+  width: 2px;
+  background-color: #e2e8f0;
+  content: '';
+}
+
+.version-timeline-entry:last-child::before {
+  display: none;
+}
+
+.version-timeline-marker {
+  position: absolute;
+  top: 18px;
+  left: -27px;
+  width: 12px;
+  height: 12px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background-color: #94a3b8;
+  box-shadow: 0 0 0 1px #cbd5e1;
+}
+
+.version-timeline-entry:first-child .version-timeline-marker {
+  background-color: var(--primary);
+  box-shadow: 0 0 0 1px #93c5fd;
+}
+
+.version-timeline details {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.version-timeline summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.version-content {
+  padding: 0 16px 16px;
+  color: var(--text-main);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.version-content small {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+
+.version-current-label,
+.version-previous-label {
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.version-current-label {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.version-previous-label {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.version-metadata {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 1.8fr;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+  white-space: normal;
+}
+
+.version-conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+  font-size: 13px;
+  white-space: normal;
+}
+
+.version-conditions > span {
+  color: var(--text-muted);
+}
+
+.version-conditions ul {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.version-conditions li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background-color: #f8fafc;
+}
+
+.version-conditions li small {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .medical-records-page .page-header,
+  .medical-record-detail-page .page-header,
+  .record-card-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .condition-fields,
+  .record-metadata,
+  .medical-timeline-metadata,
+  .version-metadata {
+    grid-template-columns: 1fr;
+  }
+
+  .condition-notes-field {
+    grid-column: auto;
+  }
+
+  .version-timeline summary {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .medical-timeline-section {
+    padding: 18px 14px;
+  }
+
+  .medical-record-timeline {
+    padding-left: 26px;
+  }
+
+  .medical-timeline-marker {
+    left: -25px;
+  }
+
+  .medical-record-timeline::before {
+    left: 8px;
+  }
+
+  .medical-timeline-header,
+  .medical-timeline-footer,
+  .timeline-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+/* ── Prescriptions page ────────────────────────────────────────────────────── */
+
+.prescriptions-page {
+  max-width: 960px;
+}
+
+/* Section header inside a card */
+.rx-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.rx-section-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+/* List of rx cards */
+.rx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Individual rx card */
+.rx-card {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.15s ease;
+}
+
+.rx-card:last-child {
+  border-bottom: none;
+}
+
+.rx-card:hover {
+  background-color: #f8fafc;
+}
+
+.rx-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.rx-card-drug {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rx-drug-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.rx-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Status badges */
+.badge-rx-active {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.badge-rx-completed {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* Detail definition list */
+.rx-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 24px;
+  margin: 0;
+}
+
+.rx-details div {
+  min-width: 0;
+}
+
+.rx-details dt {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.rx-details dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.rx-role {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Notes block */
+.rx-notes {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background-color: #f8fafc;
+  border-left: 3px solid var(--primary);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+.rx-notes-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+/* History collapsible */
+.rx-history-section {
+  overflow: hidden;
+}
+
+.rx-history-details {
+  width: 100%;
+}
+
+.rx-history-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.rx-history-summary::-webkit-details-marker {
+  display: none;
+}
+
+.rx-history-summary::before {
+  content: '▶';
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  margin-right: 4px;
+}
+
+details[open] .rx-history-summary::before {
+  transform: rotate(90deg);
+}
+
+.rx-history-list {
+  border-top: 1px solid var(--border-color);
+}
+
+.rx-history-empty {
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Prescription form modal */
+.prescription-modal {
+  max-width: 600px;
+}
+
+.prescription-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.prescription-duration-group input[type='number'] {
+  max-width: 180px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .rx-details {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .prescription-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .rx-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rx-card-actions {
+    width: 100%;
+  }
+}
+
+/* ── Demographics and visit-history report ────────────────────────────────── */
+
+.demographics-report-page {
+  max-width: 1400px;
+}
+
+.demographics-export-actions,
+.demographics-filter-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.demographics-filter-panel {
+  padding: 20px;
+}
+
+.demographics-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.demographics-filter-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.demographics-report-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -6px 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.demographics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.demographics-kpi-card {
+  padding: 18px 20px;
+  border-top: 3px solid var(--primary);
+}
+
+.demographics-kpi-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.demographics-kpi-card strong {
+  color: var(--text-main);
+  font-size: 28px;
+}
+
+.demographics-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.demographics-chart-card {
+  min-width: 0;
+  padding: 20px;
+}
+
+.demographics-section-heading h2 {
+  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.demographics-section-heading p {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.demographics-chart {
+  width: 100%;
+  height: 290px;
+  margin-top: 18px;
+}
+
+.demographics-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.demographics-table-heading {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.demographics-date-cell {
+  white-space: nowrap;
+}
+
+.demographics-loading,
+.demographics-empty-result {
+  min-height: 180px;
+}
+
+@media (max-width: 1080px) {
+  .demographics-filter-grid {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+
+  .demographics-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .demographics-report-header,
+  .demographics-report-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .demographics-export-actions {
+    width: 100%;
+  }
+
+  .demographics-export-actions .btn {
+    flex: 1;
+  }
+
+  .demographics-filter-grid,
+  .demographics-chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .demographics-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .demographics-filter-actions {
+    flex-direction: column-reverse;
+  }
+
+  .demographics-filter-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ── Allergy banner ─────────────────────────────────────────────────────────── */
+
+.allergy-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 1.5px solid #fca5a5;
+  border-left: 5px solid #dc2626;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  animation: banner-slide-in 0.25s ease;
+}
+
+@keyframes banner-slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.allergy-banner--severe {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #ef4444;
+  border-left-color: #b91c1c;
+}
+
+.allergy-banner--compact {
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+}
+
+.allergy-banner-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  color: #dc2626;
+}
+
+.allergy-banner--compact .allergy-banner-icon {
+  font-size: 16px;
+}
+
+.allergy-banner-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.allergy-banner-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #991b1b;
+  margin: 0 0 10px;
+}
+
+.allergy-banner--compact .allergy-banner-title {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.allergy-banner-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.allergy-banner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #fff;
+  border: 1.5px solid currentColor;
+  cursor: default;
+}
+
+.allergy-chip-severity {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+/* Per-severity chip colours */
+.allergy-chip--severe   { color: #b91c1c; border-color: #fca5a5; background: #fff1f2; }
+.allergy-chip--moderate { color: #c2410c; border-color: #fdba74; background: #fff7ed; }
+.allergy-chip--mild     { color: #a16207; border-color: #fde047; background: #fefce8; }
+.allergy-chip--unknown  { color: #64748b; border-color: #cbd5e1; background: #f8fafc; }
+
+/* ── Severity badges (allergy page) ─────────────────────────────────────────── */
+
+.allergy-severity-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.badge-severity-severe   { background: #fee2e2; color: #b91c1c; }
+.badge-severity-moderate { background: #ffedd5; color: #c2410c; }
+.badge-severity-mild     { background: #fef9c3; color: #a16207; }
+.badge-severity-unknown  { background: #f1f5f9; color: #64748b; }
+
+/* badge-inactive — used by allergy history counter chip */
+.badge-inactive {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* ── Allergy form modal ──────────────────────────────────────────────────────── */
+
+.allergy-modal {
+  max-width: 580px;
+}
+
+.allergy-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Allergy conflict warning (inside PrescriptionFormModal) ─────────────────── */
+
+.allergy-conflict-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #f59e0b;
+  border-left: 5px solid #d97706;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  animation: banner-slide-in 0.2s ease;
+}
+
+.conflict-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.conflict-warning-icon {
+  font-size: 18px;
+  color: #d97706;
+}
+
+.conflict-warning-header strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.conflict-warning-body {
+  font-size: 13px;
+  color: #78350f;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.conflict-warning-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Allergy card (overrides for allergy page) ───────────────────────────────── */
+
+.allergy-card .rx-card-drug {
+  gap: 8px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .allergy-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .allergy-banner-chips {
+    gap: 6px;
+  }
+
+  .conflict-warning-actions {
+    flex-direction: column;
+  }
+}
