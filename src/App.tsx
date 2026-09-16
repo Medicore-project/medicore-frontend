@@ -17,15 +17,16 @@ import PatientPrescriptionsPage from './pages/PatientPrescriptionsPage';
 import PatientAllergiesPage from './pages/PatientAllergiesPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
+import LandingPage from './pages/LandingPage';
 import { FRONT_DESK_ROLES, PATIENT_READER_ROLES } from './utils/permissions';
 
 export const App: React.FC = () => {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/patients/:patientId/records" element={<PatientMedicalRecordsPage />} />
           <Route path="/patients/:patientId/records/:recordId" element={<MedicalRecordDetailPage />} />
@@ -54,7 +55,7 @@ export const App: React.FC = () => {
           <Route path="/patients/register" element={<PatientRegistrationPage />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

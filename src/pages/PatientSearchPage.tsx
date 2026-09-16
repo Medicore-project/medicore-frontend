@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { canManagePatientProfiles } from '../utils/permissions';
 
 const PAGE_SIZE = 20;
+const DEBOUNCE_MS = 400;
 
 function readPage(value: string | null): number {
   const page = Number(value);
@@ -33,6 +34,7 @@ export const PatientSearchPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(Boolean(query));
   const [error, setError] = useState<string | null>(null);
   const requestSequence = useRef(0);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearResults = useCallback(() => {
     setItems([]);
@@ -42,15 +44,15 @@ export const PatientSearchPage: React.FC = () => {
     setHasNextPage(false);
   }, []);
 
-  const loadPatients = useCallback(async () => {
-    if (!query) return;
+  const loadPatients = useCallback(async (searchQuery: string, searchPage: number) => {
+    if (!searchQuery) return;
 
     const requestId = ++requestSequence.current;
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await patientApi.search({ q: query, page, pageSize: PAGE_SIZE });
+      const response = await patientApi.search({ q: searchQuery, page: searchPage, pageSize: PAGE_SIZE });
       if (requestId !== requestSequence.current) return;
 
       setItems(response.items);
@@ -70,8 +72,9 @@ export const PatientSearchPage: React.FC = () => {
     } finally {
       if (requestId === requestSequence.current) setIsLoading(false);
     }
-  }, [clearResults, page, query]);
+  }, [clearResults]);
 
+  // Sync URL -> input on back/forward navigation and execute fetch
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- browser navigation must synchronize the URL-backed search form
     setSearchInput(query);
@@ -84,11 +87,46 @@ export const PatientSearchPage: React.FC = () => {
       return;
     }
 
-    void loadPatients();
-  }, [clearResults, loadPatients, query]);
+    void loadPatients(query, page);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, page]);
+
+  // Debounced live search — fires 400ms after the user stops typing
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSearchInput(value);
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    const normalized = value.trim();
+
+    if (!normalized) {
+      requestSequence.current++;
+      setSearchParams({});
+      clearResults();
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    // Show spinner immediately so the UI feels responsive
+    setIsLoading(true);
+
+    debounceTimer.current = setTimeout(() => {
+      // Updating the URL param triggers the useEffect above which runs the fetch
+      setSearchParams({ q: normalized, page: '1' });
+    }, DEBOUNCE_MS);
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
     const normalizedQuery = searchInput.trim();
 
     if (!normalizedQuery) {
@@ -101,8 +139,9 @@ export const PatientSearchPage: React.FC = () => {
     }
 
     setSearchInput(normalizedQuery);
+
     if (normalizedQuery === query && page === 1) {
-      void loadPatients();
+      void loadPatients(normalizedQuery, 1);
       return;
     }
 
@@ -138,8 +177,8 @@ export const PatientSearchPage: React.FC = () => {
           value={searchInput}
           maxLength={100}
           autoComplete="off"
-          placeholder="Enter patient name, NIC or patient number…"
-          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder="Type patient name, NIC or patient number…"
+          onChange={handleInputChange}
         />
         <button type="submit" className="btn btn-primary" disabled={isLoading}>
           {isLoading ? 'Searching…' : 'Search'}
@@ -155,7 +194,7 @@ export const PatientSearchPage: React.FC = () => {
 
       {query && !error && !isLoading && (
         <p className="patient-search-summary">
-          {totalCount} patient{totalCount === 1 ? '' : 's'} found for “{query}”
+          {totalCount} patient{totalCount === 1 ? '' : 's'} found for &ldquo;{query}&rdquo;
         </p>
       )}
 
@@ -167,13 +206,15 @@ export const PatientSearchPage: React.FC = () => {
           </div>
         ) : !query ? (
           <div className="table-empty">
-            <p>Enter a name, NIC or patient number to find a patient.</p>
+            <p>Start typing to search for a patient.</p>
           </div>
         ) : items.length === 0 ? (
           <div className="table-empty">
             <p>No patients found.</p>
             <span>
-              {canManagePatients ? 'Check the search details or register a new patient.' : 'Check the search details and try again.'}
+              {canManagePatients
+                ? 'Check the search details or register a new patient.'
+                : 'Check the search details and try again.'}
             </span>
           </div>
         ) : (
@@ -194,7 +235,9 @@ export const PatientSearchPage: React.FC = () => {
                 {items.map((patient) => (
                   <tr key={patient.patientId}>
                     <td className="font-semibold">{patient.fullName}</td>
-                    <td><span className="patient-number-small">{patient.patientNumber}</span></td>
+                    <td>
+                      <span className="patient-number-small">{patient.patientNumber}</span>
+                    </td>
                     <td>{patient.nic}</td>
                     <td>{formatDate(patient.dateOfBirth)}</td>
                     <td>
@@ -208,9 +251,11 @@ export const PatientSearchPage: React.FC = () => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline"
-                        onClick={() => navigate(`/patients/${patient.patientId}`, {
-                          state: { patientSearch: searchState },
-                        })}
+                        onClick={() =>
+                          navigate(`/patients/${patient.patientId}`, {
+                            state: { patientSearch: searchState },
+                          })
+                        }
                       >
                         View
                       </button>
@@ -225,7 +270,9 @@ export const PatientSearchPage: React.FC = () => {
 
       {query && totalPages > 1 && !isLoading && (
         <div className="pagination-bar">
-          <span className="pagination-info">Page {page} of {totalPages}</span>
+          <span className="pagination-info">
+            Page {page} of {totalPages}
+          </span>
           <div className="action-buttons">
             <button
               type="button"
@@ -233,7 +280,7 @@ export const PatientSearchPage: React.FC = () => {
               disabled={!hasPreviousPage}
               onClick={() => changePage(page - 1)}
             >
-              ← Previous
+              &larr; Previous
             </button>
             <button
               type="button"
@@ -241,7 +288,7 @@ export const PatientSearchPage: React.FC = () => {
               disabled={!hasNextPage}
               onClick={() => changePage(page + 1)}
             >
-              Next →
+              Next &rarr;
             </button>
           </div>
         </div>
