@@ -169,8 +169,6 @@ export const PatientRegistrationPage: React.FC = () => {
                   <option value="">Select gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                  <option value="PreferNotToSay">Prefer not to say</option>
                 </select>
                 {fieldErrors.gender && <span className="field-error">{fieldErrors.gender}</span>}
               </div>
