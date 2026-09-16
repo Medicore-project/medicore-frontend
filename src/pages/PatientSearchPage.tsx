@@ -31,7 +31,7 @@ export const PatientSearchPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(false);
-  const [isLoading, setIsLoading] = useState(Boolean(query));
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestSequence = useRef(0);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,7 +45,6 @@ export const PatientSearchPage: React.FC = () => {
   }, []);
 
   const loadPatients = useCallback(async (searchQuery: string, searchPage: number) => {
-    if (!searchQuery) return;
 
     const requestId = ++requestSequence.current;
     setIsLoading(true);
@@ -79,14 +78,6 @@ export const PatientSearchPage: React.FC = () => {
     // oxlint-disable-next-line react/set-state-in-effect -- browser navigation must synchronize the URL-backed search form
     setSearchInput(query);
 
-    if (!query) {
-      requestSequence.current++;
-      clearResults();
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
-
     void loadPatients(query, page);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, page]);
@@ -102,21 +93,16 @@ export const PatientSearchPage: React.FC = () => {
 
     const normalized = value.trim();
 
-    if (!normalized) {
-      requestSequence.current++;
-      setSearchParams({});
-      clearResults();
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
-
     // Show spinner immediately so the UI feels responsive
     setIsLoading(true);
 
     debounceTimer.current = setTimeout(() => {
       // Updating the URL param triggers the useEffect above which runs the fetch
-      setSearchParams({ q: normalized, page: '1' });
+      if (normalized) {
+        setSearchParams({ q: normalized, page: '1' });
+      } else {
+        setSearchParams({ page: '1' });
+      }
     }, DEBOUNCE_MS);
   };
 
@@ -129,15 +115,6 @@ export const PatientSearchPage: React.FC = () => {
 
     const normalizedQuery = searchInput.trim();
 
-    if (!normalizedQuery) {
-      requestSequence.current++;
-      setSearchParams({});
-      clearResults();
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
-
     setSearchInput(normalizedQuery);
 
     if (normalizedQuery === query && page === 1) {
@@ -145,7 +122,11 @@ export const PatientSearchPage: React.FC = () => {
       return;
     }
 
-    setSearchParams({ q: normalizedQuery, page: '1' });
+    if (normalizedQuery) {
+      setSearchParams({ q: normalizedQuery, page: '1' });
+    } else {
+      setSearchParams({ page: '1' });
+    }
   };
 
   const changePage = (nextPage: number) => {
@@ -192,9 +173,13 @@ export const PatientSearchPage: React.FC = () => {
         </div>
       )}
 
-      {query && !error && !isLoading && (
+      {!error && !isLoading && (
         <p className="patient-search-summary">
-          {totalCount} patient{totalCount === 1 ? '' : 's'} found for &ldquo;{query}&rdquo;
+          {query ? (
+            <>{totalCount} patient{totalCount === 1 ? '' : 's'} found for &ldquo;{query}&rdquo;</>
+          ) : (
+            <>{totalCount} patient{totalCount === 1 ? '' : 's'} total</>
+          )}
         </p>
       )}
 
@@ -203,10 +188,6 @@ export const PatientSearchPage: React.FC = () => {
           <div className="table-loading">
             <div className="spinner" />
             <p>Searching patients…</p>
-          </div>
-        ) : !query ? (
-          <div className="table-empty">
-            <p>Start typing to search for a patient.</p>
           </div>
         ) : items.length === 0 ? (
           <div className="table-empty">
@@ -268,7 +249,7 @@ export const PatientSearchPage: React.FC = () => {
         )}
       </div>
 
-      {query && totalPages > 1 && !isLoading && (
+      {totalPages > 1 && !isLoading && (
         <div className="pagination-bar">
           <span className="pagination-info">
             Page {page} of {totalPages}
