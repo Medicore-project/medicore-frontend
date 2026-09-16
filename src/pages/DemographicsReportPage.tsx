@@ -140,7 +140,7 @@ export const DemographicsReportPage: React.FC = () => {
   const [filterError, setFilterError] = useState<string | null>(null);
   const requestSequence = useRef(0);
 
-  const loadReport = useCallback(async (filters: DemographicsReportFilters) => {
+  const loadReport = useCallback(async (filters: DemographicsReportFilters, isRetry = false) => {
     const requestId = ++requestSequence.current;
     setIsLoading(true);
     setError(null);
@@ -149,10 +149,19 @@ export const DemographicsReportPage: React.FC = () => {
       const response = await demographicsReportsApi.get(filters);
       if (requestId === requestSequence.current) setReport(response);
     } catch (requestError: unknown) {
-      if (requestId === requestSequence.current) {
-        setReport(null);
-        setError(errorMessage(requestError, 'Unable to load the demographics report. Please try again.'));
+      if (requestId !== requestSequence.current) return;
+
+      // Auto-retry once after 3 s to handle Azure cold-start (app waking from idle)
+      if (!isRetry) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        if (requestId === requestSequence.current) {
+          void loadReport(filters, true);
+        }
+        return;
       }
+
+      setReport(null);
+      setError(errorMessage(requestError, 'Unable to load the demographics report. Please try again.'));
     } finally {
       if (requestId === requestSequence.current) setIsLoading(false);
     }
