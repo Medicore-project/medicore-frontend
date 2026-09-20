@@ -15,10 +15,11 @@ import PatientMedicalRecordsPage from './pages/PatientMedicalRecordsPage';
 import MedicalRecordDetailPage from './pages/MedicalRecordDetailPage';
 import PatientPrescriptionsPage from './pages/PatientPrescriptionsPage';
 import PatientAllergiesPage from './pages/PatientAllergiesPage';
+import AppointmentsPage from './pages/AppointmentsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
-import { FRONT_DESK_ROLES, PATIENT_READER_ROLES } from './utils/permissions';
+import { FRONT_DESK_ROLES, PATIENT_READER_ROLES, SCHEDULE_READER_ROLES } from './utils/permissions';
 
 export const App: React.FC = () => {
   return (
@@ -53,6 +54,11 @@ export const App: React.FC = () => {
       <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/patients/register" element={<PatientRegistrationPage />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={[...SCHEDULE_READER_ROLES]} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/appointments" element={<AppointmentsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

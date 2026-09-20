@@ -3533,3 +3533,161 @@ details[open] .rx-history-summary::before {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Appointments — weekly schedule grid (SCRUM-32)
+   ========================================================================== */
+
+.schedule-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.schedule-toolbar .form-group {
+  margin-bottom: 0;
+  min-width: 260px;
+}
+
+.schedule-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.schedule-week-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: 0.5rem;
+}
+
+.schedule-flagged-banner ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.schedule-flagged-banner li {
+  font-size: 0.875rem;
+}
+
+.schedule-grid-card {
+  margin-bottom: 1.25rem;
+}
+
+.schedule-empty {
+  color: var(--text-muted);
+  padding: 1.5rem 0;
+  margin: 0;
+}
+
+/* The grid can exceed the viewport on narrow screens; scroll it rather than
+   the page, so the surrounding layout stays put. */
+.schedule-grid-scroll {
+  overflow-x: auto;
+}
+
+.schedule-grid {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.schedule-grid th,
+.schedule-grid td {
+  border: 1px solid var(--border-light);
+  padding: 0.35rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.schedule-grid thead th {
+  background: var(--bg-subtle);
+  padding: 0.6rem 0.35rem;
+}
+
+.schedule-day-name {
+  display: block;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.schedule-day-date {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.schedule-time-col {
+  width: 72px;
+  background: var(--bg-subtle);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.schedule-cell {
+  padding: 0.25rem;
+}
+
+/* A time the doctor does not work on that day — deliberately blank rather than
+   an empty chip, so the working pattern is readable at a glance. */
+.schedule-cell--none {
+  background: var(--bg-muted);
+}
+
+.slot-chip {
+  display: block;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.slot-chip:disabled {
+  cursor: default;
+}
+
+.slot-chip--available {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.slot-chip--booked {
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border-color: var(--primary-light);
+}
+
+.slot-chip--blocked {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+.slot-chip--flagged {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-color: var(--error-border);
+}
+
+@media (max-width: 768px) {
+  .schedule-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .schedule-toolbar .form-group {
+    min-width: 0;
+  }
+}
