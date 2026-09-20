@@ -16,6 +16,7 @@ import MedicalRecordDetailPage from './pages/MedicalRecordDetailPage';
 import PatientPrescriptionsPage from './pages/PatientPrescriptionsPage';
 import PatientAllergiesPage from './pages/PatientAllergiesPage';
 import AppointmentsPage from './pages/AppointmentsPage';
+import DoctorLeavePage from './pages/DoctorLeavePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -59,6 +60,7 @@ export const App: React.FC = () => {
       <Route element={<ProtectedRoute allowedRoles={[...SCHEDULE_READER_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/appointments" element={<AppointmentsPage />} />
+          <Route path="/appointments/leave" element={<DoctorLeavePage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

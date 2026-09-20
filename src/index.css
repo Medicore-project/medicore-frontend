@@ -3691,3 +3691,47 @@ details[open] .rx-history-summary::before {
     min-width: 0;
   }
 }
+
+/* ==========================================================================
+   Doctor leave — request list and approval queue (SCRUM-32)
+   ========================================================================== */
+
+/* Pending reads as "waiting on someone", not as a failure — amber rather than red,
+   since a pending request is the normal state, not an error. */
+.badge-leave-pending {
+  background: var(--warning-bg);
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber-border);
+}
+
+.badge-leave-approved {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.badge-leave-rejected {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
+}
+
+.leave-page .modal-form .field-help {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.leave-page textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+
+.leave-page textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}

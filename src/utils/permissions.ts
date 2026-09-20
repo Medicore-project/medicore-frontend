@@ -21,6 +21,14 @@ export function canManageSchedules(role?: string): boolean {
 }
 
 /**
+ * Mirrors the appointment service's LeaveManager policy — submit and withdraw leave requests.
+ * Submitting does not grant leave: the request stays pending until an approver decides it.
+ */
+export function canRequestLeave(role?: string): boolean {
+  return role === 'Admin' || role === 'Receptionist' || role === 'Doctor';
+}
+
+/**
  * Mirrors the appointment service's LeaveApprover policy. Deliberately excludes Doctor, so a
  * doctor never sees the controls to approve their own leave request.
  */
