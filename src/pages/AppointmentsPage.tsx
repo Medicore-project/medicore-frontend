@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { DAY_NAMES, colomboTimeLabel, scheduleApi, slotApi, toDateOnly } from '../api/appointments';
+import { DAY_NAMES, colomboTimeLabel, leaveApi, scheduleApi, slotApi, toDateOnly } from '../api/appointments';
 import type {
   CreateScheduleBody,
   DayOfWeekNumber,
+  DoctorLeaveResponse,
   DoctorScheduleResponse,
   SlotReconciliationSummary,
   SlotResponse,
@@ -85,6 +86,7 @@ export const AppointmentsPage: React.FC = () => {
   const [slots, setSlots] = useState<SlotResponse[]>([]);
   const [flagged, setFlagged] = useState<SlotResponse[]>([]);
   const [schedules, setSchedules] = useState<DoctorScheduleResponse[]>([]);
+  const [approvedLeave, setApprovedLeave] = useState<DoctorLeaveResponse[]>([]);
 
   const [isLoadingDoctors, setIsLoadingDoctors] = useState(true);
   const [isLoadingWeek, setIsLoadingWeek] = useState(false);
@@ -129,19 +131,22 @@ export const AppointmentsPage: React.FC = () => {
     try {
       const from = toDateOnly(weekStart);
       const to = toDateOnly(addDays(weekStart, 6));
-      const [available, flaggedSlots, doctorSchedules] = await Promise.all([
+      const [available, flaggedSlots, doctorSchedules, leave] = await Promise.all([
         slotApi.available(doctorId, from, to),
         slotApi.flagged(doctorId),
         scheduleApi.listForDoctor(doctorId),
+        leaveApi.approved(doctorId, from, to),
       ]);
       setSlots(available);
       setFlagged(flaggedSlots);
       setSchedules(doctorSchedules);
+      setApprovedLeave(leave);
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load the schedule.'));
       setSlots([]);
       setFlagged([]);
       setSchedules([]);
+      setApprovedLeave([]);
     } finally {
       setIsLoadingWeek(false);
     }
@@ -175,6 +180,25 @@ export const AppointmentsPage: React.FC = () => {
     const to = toDateOnly(addDays(weekStart, 6));
     return flagged.filter((s) => s.slotDate >= from && s.slotDate <= to);
   }, [flagged, weekStart]);
+
+  /** `YYYY-MM-DD` → the approved leave request covering that date, for the empty cells it produced. */
+  const leaveByDate = useMemo(() => {
+    const map = new Map<string, DoctorLeaveResponse>();
+    for (const leave of approvedLeave) {
+      for (let d = leave.startDate; d <= leave.endDate; ) {
+        map.set(d, leave);
+        if (d === leave.endDate) break;
+        d = toDateOnly(addDays(new Date(`${d}T00:00:00`), 1));
+      }
+    }
+    return map;
+  }, [approvedLeave]);
+
+  /** Whether every day in the visible week is covered by approved leave — the whole grid is empty because of it. */
+  const weekFullyOnLeave = useMemo(
+    () => weekDays.length > 0 && weekDays.every((day) => leaveByDate.has(toDateOnly(day))),
+    [weekDays, leaveByDate],
+  );
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -366,6 +390,13 @@ export const AppointmentsPage: React.FC = () => {
 
         {isLoadingWeek ? (
           <p className="schedule-empty">Loading…</p>
+        ) : timeRows.length === 0 && weekFullyOnLeave ? (
+          <p className="schedule-empty schedule-empty--leave">
+            {selectedDoctor
+              ? `${selectedDoctor.fullName || `${selectedDoctor.firstName} ${selectedDoctor.lastName}`} is on approved leave`
+              : 'On approved leave'}{' '}
+            for the whole of this week.
+          </p>
         ) : timeRows.length === 0 ? (
           <p className="schedule-empty">
             No bookable slots this week. The doctor may have no schedule covering these dates, or the
@@ -398,6 +429,18 @@ export const AppointmentsPage: React.FC = () => {
                     {weekDays.map((day) => {
                       const slot = slotIndex.get(`${toDateOnly(day)}|${time}`);
                       if (!slot) {
+                        const leave = leaveByDate.get(toDateOnly(day));
+                        if (leave) {
+                          return (
+                            <td
+                              key={day.toISOString()}
+                              className="schedule-cell schedule-cell--leave"
+                              title={`On approved leave${leave.reason ? `: ${leave.reason}` : ''} (${leave.startDate} to ${leave.endDate})`}
+                            >
+                              On leave
+                            </td>
+                          );
+                        }
                         return <td key={day.toISOString()} className="schedule-cell schedule-cell--none" />;
                       }
                       return (

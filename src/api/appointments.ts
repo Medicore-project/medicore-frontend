@@ -261,6 +261,18 @@ export const leaveApi = {
     return response.data;
   },
 
+  /**
+   * Approved leave overlapping the range. Explains an otherwise-empty day in the booking grid —
+   * no slots because the doctor is on leave, as opposed to no schedule or a public holiday.
+   */
+  async approved(doctorId: string, from: string, to: string): Promise<DoctorLeaveResponse[]> {
+    const query = new URLSearchParams({ doctorId, from, to });
+    const response = await apiClient.get<DoctorLeaveResponse[]>(
+      `${leavesPath}/approved?${query.toString()}`,
+    );
+    return response.data;
+  },
+
   /** The approval queue. Requires the LeaveApprover policy (Admin). */
   async pending(): Promise<DoctorLeaveResponse[]> {
     const response = await apiClient.get<DoctorLeaveResponse[]>(`${leavesPath}/pending`);
