@@ -20,7 +20,12 @@ import DoctorLeavePage from './pages/DoctorLeavePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
-import { FRONT_DESK_ROLES, PATIENT_READER_ROLES, SCHEDULE_READER_ROLES } from './utils/permissions';
+import {
+  FRONT_DESK_ROLES,
+  LEAVE_READER_ROLES,
+  PATIENT_READER_ROLES,
+  SCHEDULE_READER_ROLES,
+} from './utils/permissions';
 
 export const App: React.FC = () => {
   return (
@@ -60,6 +65,10 @@ export const App: React.FC = () => {
       <Route element={<ProtectedRoute allowedRoles={[...SCHEDULE_READER_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/appointments" element={<AppointmentsPage />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={[...LEAVE_READER_ROLES]} />}>
+        <Route element={<AppLayout />}>
           <Route path="/appointments/leave" element={<DoctorLeavePage />} />
         </Route>
       </Route>

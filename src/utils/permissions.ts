@@ -4,6 +4,15 @@ export const FRONT_DESK_ROLES = ['Admin', 'Receptionist'] as const;
 /** Mirrors the appointment service's ScheduleReader policy. */
 export const SCHEDULE_READER_ROLES = ['Admin', 'Receptionist', 'Doctor', 'Nurse'] as const;
 
+/**
+ * Mirrors the appointment service's LeaveReader policy — the full leave record (every request
+ * whatever its status, reasons, review notes), not just which dates are covered by approved leave.
+ * Narrower than SCHEDULE_READER_ROLES on purpose: Receptionist and Nurse get "is this doctor
+ * unavailable" from the booking grid (SCHEDULE_READER_ROLES already covers that), and have no
+ * reason to browse the approval history behind it.
+ */
+export const LEAVE_READER_ROLES = ['Admin', 'Doctor'] as const;
+
 export function canWriteMedicalRecords(role?: string): boolean {
   return role === 'Doctor' || role === 'Nurse';
 }
