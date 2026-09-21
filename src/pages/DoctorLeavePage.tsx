@@ -65,7 +65,8 @@ function doctorName(doctors: StaffResponse[], id: string): string {
 
 export const DoctorLeavePage: React.FC = () => {
   const { user } = useAuth();
-  const canRequest = canRequestLeave(user?.role);
+  const isDoctorRole = user?.role === 'Doctor';
+  const canRequest = canRequestLeave(user?.role) && !!user?.staffId;
   const canApprove = canApproveLeave(user?.role);
 
   const [doctors, setDoctors] = useState<StaffResponse[]>([]);
@@ -94,7 +95,14 @@ export const DoctorLeavePage: React.FC = () => {
         const result = await staffApi.list({ role: 'Doctor', isActive: true, pageSize: 100 });
         if (cancelled) return;
         setDoctors(result.items ?? []);
-        if (result.items?.length) setDoctorId(String(result.items[0].id));
+        // A doctor can only ever see and act on their own leave — lock the selection to their own
+        // staffId rather than letting them browse (and, before the ownership check existed, act on
+        // behalf of) another doctor. Everyone else keeps free choice, to review any doctor's leave.
+        if (isDoctorRole) {
+          setDoctorId(user?.staffId ?? '');
+        } else if (result.items?.length) {
+          setDoctorId(String(result.items[0].id));
+        }
       } catch (err) {
         if (!cancelled) setError(extractErrorMessage(err, 'Failed to load doctors.'));
       }
@@ -102,7 +110,7 @@ export const DoctorLeavePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isDoctorRole, user?.staffId]);
 
   const load = useCallback(async () => {
     if (!doctorId) return;
@@ -230,7 +238,7 @@ export const DoctorLeavePage: React.FC = () => {
             className="filter-select"
             value={doctorId}
             onChange={(e) => setDoctorId(e.target.value)}
-            disabled={doctors.length === 0}
+            disabled={isDoctorRole || doctors.length === 0}
           >
             {doctors.length === 0 && <option value="">No doctors found</option>}
             {doctors.map((d) => (
@@ -240,10 +248,11 @@ export const DoctorLeavePage: React.FC = () => {
               </option>
             ))}
           </select>
-          {user?.role === 'Doctor' && (
+          {isDoctorRole && (
             <span className="field-help">
-              Select yourself. Linking your login to your doctor record automatically arrives with
-              SCRUM-33.
+              {user?.staffId
+                ? 'You can only view and request your own leave.'
+                : 'Your account has no linked staff profile, so you cannot request leave. Contact an administrator.'}
             </span>
           )}
         </div>

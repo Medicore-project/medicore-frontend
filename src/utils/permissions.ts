@@ -22,10 +22,12 @@ export function canManageSchedules(role?: string): boolean {
 
 /**
  * Mirrors the appointment service's LeaveManager policy — submit and withdraw leave requests.
- * Submitting does not grant leave: the request stays pending until an approver decides it.
+ * Doctor-only: the service additionally checks the caller's own staffId against the request's
+ * DoctorId, so this only ever lets someone act on their own leave, never on another doctor's
+ * behalf. Submitting does not grant leave: the request stays pending until an approver decides it.
  */
 export function canRequestLeave(role?: string): boolean {
-  return role === 'Admin' || role === 'Receptionist' || role === 'Doctor';
+  return role === 'Doctor';
 }
 
 /**
