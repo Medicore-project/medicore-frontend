@@ -654,6 +654,74 @@ body {
   color: var(--text-main);
 }
 
+/* ── Expandable table rows (department / specialization → assigned staff) ──── */
+
+/* The name doubles as the expand control, so the whole row does not become a click
+   target that would fight with the Edit/Delete buttons sitting next to it. */
+.row-expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: left;
+}
+
+.row-expand-toggle:hover {
+  color: var(--primary);
+}
+
+.row-expand-caret {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.expanded-row > td {
+  border-bottom: none;
+}
+
+.assigned-staff-row > td {
+  background: var(--bg-muted);
+  padding: 12px 16px 16px;
+}
+
+.assigned-staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.assigned-staff-table th {
+  text-align: left;
+  padding: 6px 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.assigned-staff-table td {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.assigned-staff-empty {
+  margin: 0;
+  padding: 4px 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.assigned-staff-empty--error {
+  color: var(--error-text);
+}
+
 .table-loading,
 .table-empty {
   padding: 56px 24px;

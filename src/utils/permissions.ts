@@ -22,6 +22,16 @@ export function canManagePatientProfiles(role?: string): boolean {
 }
 
 /**
+ * Whether departments and specializations can be created, edited or deleted, as opposed to merely
+ * read. Mirrors the identity service's AdminOnly policy on those controllers' write endpoints —
+ * Receptionist reaches every GET (FRONT_DESK_ROLES) but no write, so the pages render read-only
+ * for them rather than offering buttons the API would reject.
+ */
+export function canManageOrganization(role?: string): boolean {
+  return role === 'Admin';
+}
+
+/**
  * Mirrors the appointment service's ScheduleManager policy — create, change and delete doctor
  * schedules and block slots. This only hides controls; the service enforces it for real.
  */

@@ -1,7 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LEAVE_READER_ROLES, PATIENT_READER_ROLES, SCHEDULE_READER_ROLES } from '../../utils/permissions';
+import {
+  FRONT_DESK_ROLES,
+  LEAVE_READER_ROLES,
+  PATIENT_READER_ROLES,
+  SCHEDULE_READER_ROLES,
+} from '../../utils/permissions';
 
 // `end` pins the active state to an exact match. Without it a parent path stays
 // highlighted while a child route is open — /appointments would light up on
@@ -18,8 +23,8 @@ const navItems: Array<{
   allowedRoles?: readonly string[];
 }> = [
   { name: 'Dashboard', path: '/dashboard' },
-  { name: 'Departments', path: '/departments', allowedRoles: ['Admin'] },
-  { name: 'Specializations', path: '/specializations', allowedRoles: ['Admin'] },
+  { name: 'Departments', path: '/departments', allowedRoles: FRONT_DESK_ROLES },
+  { name: 'Specializations', path: '/specializations', allowedRoles: FRONT_DESK_ROLES },
   { name: 'Staff', path: '/staff', allowedRoles: ['Admin'] },
   { name: 'Patients', path: '/patients', allowedRoles: PATIENT_READER_ROLES },
   { name: 'Appointments', path: '/appointments', end: true, allowedRoles: SCHEDULE_READER_ROLES },

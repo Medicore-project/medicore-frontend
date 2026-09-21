@@ -43,12 +43,18 @@ export const App: React.FC = () => {
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/departments" element={<DepartmentsPage />} />
-          <Route path="/specializations" element={<SpecializationsPage />} />
           <Route path="/staff" element={<StaffListPage />} />
           <Route path="/staff/:id" element={<StaffDetailPage />} />
           <Route path="/reports/audit" element={<AuditReportPage />} />
           <Route path="/reports/demographics" element={<DemographicsReportPage />} />
+        </Route>
+      </Route>
+      {/* Readable by the front desk, writable only by Admin — the pages gate their own
+          create/edit/delete controls, matching the identity service's AdminOnly write policy. */}
+      <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/departments" element={<DepartmentsPage />} />
+          <Route path="/specializations" element={<SpecializationsPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[...PATIENT_READER_ROLES]} />}>
