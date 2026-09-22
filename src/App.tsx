@@ -15,10 +15,17 @@ import PatientMedicalRecordsPage from './pages/PatientMedicalRecordsPage';
 import MedicalRecordDetailPage from './pages/MedicalRecordDetailPage';
 import PatientPrescriptionsPage from './pages/PatientPrescriptionsPage';
 import PatientAllergiesPage from './pages/PatientAllergiesPage';
+import AppointmentsPage from './pages/AppointmentsPage';
+import DoctorLeavePage from './pages/DoctorLeavePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
-import { FRONT_DESK_ROLES, PATIENT_READER_ROLES } from './utils/permissions';
+import {
+  FRONT_DESK_ROLES,
+  LEAVE_READER_ROLES,
+  PATIENT_READER_ROLES,
+  SCHEDULE_READER_ROLES,
+} from './utils/permissions';
 
 export const App: React.FC = () => {
   return (
@@ -36,12 +43,18 @@ export const App: React.FC = () => {
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/departments" element={<DepartmentsPage />} />
-          <Route path="/specializations" element={<SpecializationsPage />} />
           <Route path="/staff" element={<StaffListPage />} />
           <Route path="/staff/:id" element={<StaffDetailPage />} />
           <Route path="/reports/audit" element={<AuditReportPage />} />
           <Route path="/reports/demographics" element={<DemographicsReportPage />} />
+        </Route>
+      </Route>
+      {/* Readable by the front desk, writable only by Admin — the pages gate their own
+          create/edit/delete controls, matching the identity service's AdminOnly write policy. */}
+      <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/departments" element={<DepartmentsPage />} />
+          <Route path="/specializations" element={<SpecializationsPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[...PATIENT_READER_ROLES]} />}>
@@ -53,6 +66,16 @@ export const App: React.FC = () => {
       <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/patients/register" element={<PatientRegistrationPage />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={[...SCHEDULE_READER_ROLES]} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/appointments" element={<AppointmentsPage />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={[...LEAVE_READER_ROLES]} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/appointments/leave" element={<DoctorLeavePage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

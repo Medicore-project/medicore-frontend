@@ -34,6 +34,8 @@ export interface StaffListParams {
   departmentId?: string | number;
   role?: string;
   isActive?: boolean;
+  /** Exact specialization name. Unlike `search`, it will not match a longer name containing it. */
+  specialization?: string;
 }
 
 export interface CreateStaffBody {
@@ -65,6 +67,7 @@ export const staffApi = {
     if (params.departmentId !== undefined) query.set('departmentId', String(params.departmentId));
     if (params.role) query.set('role', params.role);
     if (params.isActive !== undefined) query.set('isActive', String(params.isActive));
+    if (params.specialization) query.set('specialization', params.specialization);
     return apiClient.get<StaffListResponse>(`/api/staff?${query.toString()}`).then((r) => r.data);
   },
 

@@ -6,6 +6,8 @@ export interface User {
   email: string;
   role: string;
   name?: string;
+  /** This user's own Staff/Doctor id — the id used as `DoctorId` in the appointment service. */
+  staffId?: string | null;
 }
 
 interface AuthContextType {

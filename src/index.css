@@ -654,6 +654,74 @@ body {
   color: var(--text-main);
 }
 
+/* ── Expandable table rows (department / specialization → assigned staff) ──── */
+
+/* The name doubles as the expand control, so the whole row does not become a click
+   target that would fight with the Edit/Delete buttons sitting next to it. */
+.row-expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: left;
+}
+
+.row-expand-toggle:hover {
+  color: var(--primary);
+}
+
+.row-expand-caret {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.expanded-row > td {
+  border-bottom: none;
+}
+
+.assigned-staff-row > td {
+  background: var(--bg-muted);
+  padding: 12px 16px 16px;
+}
+
+.assigned-staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.assigned-staff-table th {
+  text-align: left;
+  padding: 6px 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.assigned-staff-table td {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.assigned-staff-empty {
+  margin: 0;
+  padding: 4px 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.assigned-staff-empty--error {
+  color: var(--error-text);
+}
+
 .table-loading,
 .table-empty {
   padding: 56px 24px;
@@ -3532,4 +3600,222 @@ details[open] .rx-history-summary::before {
   .patient-search-bar .btn {
     width: 100%;
   }
+}
+
+/* ==========================================================================
+   Appointments — weekly schedule grid (SCRUM-32)
+   ========================================================================== */
+
+.schedule-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.schedule-toolbar .form-group {
+  margin-bottom: 0;
+  min-width: 260px;
+}
+
+.schedule-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.schedule-week-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: 0.5rem;
+}
+
+.schedule-flagged-banner ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.schedule-flagged-banner li {
+  font-size: 0.875rem;
+}
+
+.schedule-grid-card {
+  margin-bottom: 1.25rem;
+}
+
+.schedule-empty {
+  color: var(--text-muted);
+  padding: 1.5rem 0;
+  margin: 0;
+}
+
+.schedule-empty--leave {
+  color: var(--accent-amber);
+  font-weight: 600;
+}
+
+/* The grid can exceed the viewport on narrow screens; scroll it rather than
+   the page, so the surrounding layout stays put. */
+.schedule-grid-scroll {
+  overflow-x: auto;
+}
+
+.schedule-grid {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.schedule-grid th,
+.schedule-grid td {
+  border: 1px solid var(--border-light);
+  padding: 0.35rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.schedule-grid thead th {
+  background: var(--bg-subtle);
+  padding: 0.6rem 0.35rem;
+}
+
+.schedule-day-name {
+  display: block;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.schedule-day-date {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.schedule-time-col {
+  width: 72px;
+  background: var(--bg-subtle);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.schedule-cell {
+  padding: 0.25rem;
+}
+
+/* A time the doctor does not work on that day — deliberately blank rather than
+   an empty chip, so the working pattern is readable at a glance. */
+.schedule-cell--none {
+  background: var(--bg-muted);
+}
+
+/* No slots because approved leave suppressed them — labelled rather than blank, so a
+   receptionist doesn't mistake it for "no schedule" and wonder why the day won't book. */
+.schedule-cell--leave {
+  background: var(--warning-bg);
+  color: var(--accent-amber);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.slot-chip {
+  display: block;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.slot-chip:disabled {
+  cursor: default;
+}
+
+.slot-chip--available {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.slot-chip--booked {
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border-color: var(--primary-light);
+}
+
+.slot-chip--blocked {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+.slot-chip--flagged {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-color: var(--error-border);
+}
+
+@media (max-width: 768px) {
+  .schedule-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .schedule-toolbar .form-group {
+    min-width: 0;
+  }
+}
+
+/* ==========================================================================
+   Doctor leave — request list and approval queue (SCRUM-32)
+   ========================================================================== */
+
+/* Pending reads as "waiting on someone", not as a failure — amber rather than red,
+   since a pending request is the normal state, not an error. */
+.badge-leave-pending {
+  background: var(--warning-bg);
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber-border);
+}
+
+.badge-leave-approved {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.badge-leave-rejected {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
+}
+
+.leave-page .modal-form .field-help {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.leave-page textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+
+.leave-page textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
 }
