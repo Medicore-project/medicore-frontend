@@ -1,15 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { DAY_NAMES, colomboTimeLabel, leaveApi, scheduleApi, slotApi, toDateOnly } from '../api/appointments';
+import {
+  DAY_NAMES,
+  colomboTimeLabel,
+  doctorApi,
+  leaveApi,
+  scheduleApi,
+  slotApi,
+  toDateOnly,
+} from '../api/appointments';
 import type {
   CreateScheduleBody,
   DayOfWeekNumber,
   DoctorLeaveResponse,
+  DoctorResponse,
   DoctorScheduleResponse,
   SlotReconciliationSummary,
   SlotResponse,
 } from '../api/appointments';
-import { staffApi } from '../api/staff';
-import type { StaffResponse } from '../api/staff';
 import { useAuth } from '../contexts/AuthContext';
 import { canManageSchedules } from '../utils/permissions';
 
@@ -27,6 +34,16 @@ function addDays(date: Date, days: number): Date {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
+}
+
+/** "Sun 27 Sep", "Tue 22 – Thu 24 Sep", or "Wed 30 Sep – Thu 1 Oct" across a month end. */
+function dayRangeLabel(start: Date, end: Date): string {
+  const day = (d: Date) => `${DAY_NAMES[d.getDay()].slice(0, 3)} ${d.getDate()}`;
+  const month = (d: Date) => d.toLocaleDateString(undefined, { month: 'short' });
+
+  if (toDateOnly(start) === toDateOnly(end)) return `${day(start)} ${month(start)}`;
+  if (start.getMonth() === end.getMonth()) return `${day(start)} – ${day(end)} ${month(end)}`;
+  return `${day(start)} ${month(start)} – ${day(end)} ${month(end)}`;
 }
 
 function extractErrorMessage(err: unknown, fallback: string): string {
@@ -79,7 +96,7 @@ export const AppointmentsPage: React.FC = () => {
   const { user } = useAuth();
   const canManage = canManageSchedules(user?.role);
 
-  const [doctors, setDoctors] = useState<StaffResponse[]>([]);
+  const [doctors, setDoctors] = useState<DoctorResponse[]>([]);
   const [doctorId, setDoctorId] = useState<string>('');
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
 
@@ -109,10 +126,12 @@ export const AppointmentsPage: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const result = await staffApi.list({ role: 'Doctor', isActive: true, pageSize: 100 });
+        // From the appointment service's doctor cache, not Identity, so the booking grid still
+        // loads while Identity is down (SCRUM-33). Only bookable doctors are returned.
+        const result = await doctorApi.list();
         if (cancelled) return;
-        setDoctors(result.items ?? []);
-        if (result.items?.length) setDoctorId(String(result.items[0].id));
+        setDoctors(result);
+        if (result.length) setDoctorId(result[0].doctorId);
       } catch (err) {
         if (!cancelled) setError(extractErrorMessage(err, 'Failed to load doctors.'));
       } finally {
@@ -199,6 +218,28 @@ export const AppointmentsPage: React.FC = () => {
     () => weekDays.length > 0 && weekDays.every((day) => leaveByDate.has(toDateOnly(day))),
     [weekDays, leaveByDate],
   );
+
+  /**
+   * The visible week's leave days as runs of consecutive dates.
+   *
+   * Leave cells can only be drawn inside time rows, and rows come from the week's free slots. A
+   * week partly on leave whose other days have no free slots — past, unscheduled or holidays —
+   * therefore has no rows to put them in, so the empty-week message names these runs instead.
+   */
+  const leaveRunsThisWeek = useMemo(() => {
+    const runs: { start: Date; end: Date; leave: DoctorLeaveResponse }[] = [];
+    for (const day of weekDays) {
+      const leave = leaveByDate.get(toDateOnly(day));
+      if (!leave) continue;
+      const last = runs[runs.length - 1];
+      if (last && last.leave.leaveId === leave.leaveId && toDateOnly(addDays(last.end, 1)) === toDateOnly(day)) {
+        last.end = day;
+      } else {
+        runs.push({ start: day, end: day, leave });
+      }
+    }
+    return runs;
+  }, [weekDays, leaveByDate]);
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -301,7 +342,7 @@ export const AppointmentsPage: React.FC = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  const selectedDoctor = doctors.find((d) => String(d.id) === doctorId);
+  const selectedDoctor = doctors.find((d) => d.doctorId === doctorId);
   const weekLabel = `${weekStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${addDays(
     weekStart,
     6,
@@ -345,10 +386,10 @@ export const AppointmentsPage: React.FC = () => {
             onChange={(e) => setDoctorId(e.target.value)}
             disabled={isLoadingDoctors || doctors.length === 0}
           >
-            {doctors.length === 0 && <option value="">No doctors found</option>}
+            {doctors.length === 0 && <option value="">No bookable doctors</option>}
             {doctors.map((d) => (
-              <option key={String(d.id)} value={String(d.id)}>
-                {d.fullName || `${d.firstName} ${d.lastName}`}
+              <option key={d.doctorId} value={d.doctorId}>
+                {d.fullName}
                 {d.specialization ? ` — ${d.specialization}` : ''}
               </option>
             ))}
@@ -385,7 +426,7 @@ export const AppointmentsPage: React.FC = () => {
       {/* ── Weekly grid ── */}
       <div className="card schedule-grid-card">
         <h2 className="detail-section-title">
-          {selectedDoctor ? selectedDoctor.fullName || `${selectedDoctor.firstName} ${selectedDoctor.lastName}` : 'Week'}
+          {selectedDoctor ? selectedDoctor.fullName : 'Week'}
         </h2>
 
         {isLoadingWeek ? (
@@ -393,15 +434,34 @@ export const AppointmentsPage: React.FC = () => {
         ) : timeRows.length === 0 && weekFullyOnLeave ? (
           <p className="schedule-empty schedule-empty--leave">
             {selectedDoctor
-              ? `${selectedDoctor.fullName || `${selectedDoctor.firstName} ${selectedDoctor.lastName}`} is on approved leave`
+              ? `${selectedDoctor.fullName} is on approved leave`
               : 'On approved leave'}{' '}
             for the whole of this week.
           </p>
+        ) : timeRows.length === 0 && leaveRunsThisWeek.length > 0 ? (
+          <div className="schedule-empty schedule-empty--notice">
+            <p className="schedule-empty-title">No free slots this week</p>
+            <div className="leave-days">
+              <span className="leave-days-label">On leave</span>
+              {leaveRunsThisWeek.map((run) => (
+                <span
+                  key={`${run.leave.leaveId}-${toDateOnly(run.start)}`}
+                  className="leave-day-chip"
+                  title={run.leave.reason ?? undefined}
+                >
+                  {dayRangeLabel(run.start, run.end)}
+                </span>
+              ))}
+            </div>
+            <p className="schedule-empty-hint">The other days are in the past or have no working hours.</p>
+          </div>
         ) : timeRows.length === 0 ? (
-          <p className="schedule-empty">
-            No bookable slots this week. The doctor may have no schedule covering these dates, or the
-            days may be public holidays or approved leave.
-          </p>
+          <div className="schedule-empty schedule-empty--notice">
+            <p className="schedule-empty-title">No free slots this week</p>
+            <p className="schedule-empty-hint">
+              These dates are in the past, have no working hours, or fall on public holidays.
+            </p>
+          </div>
         ) : (
           <div className="schedule-grid-scroll">
             <table className="schedule-grid">

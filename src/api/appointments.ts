@@ -144,15 +144,41 @@ export interface UpdateScheduleBody {
   isActive: boolean;
 }
 
+/**
+ * A bookable doctor from the appointment service's own copy of Identity's staff data (SCRUM-33).
+ *
+ * Booking screens use this instead of the Identity staff list so that they keep working while
+ * Identity is down. The copy is eventually consistent: a change made in Identity appears here a
+ * few seconds later. Deactivated doctors are never listed.
+ */
+export interface DoctorResponse {
+  /** The doctor's staff id — what schedules, slots and leave call `doctorId`. */
+  doctorId: string;
+  fullName: string;
+  /** Free text as entered in Identity; empty string when none is set. */
+  specialization: string;
+  departmentId: string;
+}
+
 // ── API clients ───────────────────────────────────────────────────────────────
 // Paths are gateway-prefixed: the gateway routes /appointment/** to the
 // appointment service and strips the prefix, so `api/schedules` on the
 // controller is reached as `/appointment/api/schedules`.
 
+const doctorsPath = '/appointment/api/doctors';
 const schedulesPath = '/appointment/api/schedules';
 const slotsPath = '/appointment/api/slots';
 const holidaysPath = '/appointment/api/holidays';
 const leavesPath = '/appointment/api/doctor-leaves';
+
+export const doctorApi = {
+  /** Bookable doctors ordered by name, optionally narrowed to one specialization. */
+  async list(specialization?: string): Promise<DoctorResponse[]> {
+    const query = specialization ? `?${new URLSearchParams({ specialization }).toString()}` : '';
+    const response = await apiClient.get<DoctorResponse[]>(`${doctorsPath}${query}`);
+    return response.data;
+  },
+};
 
 export const scheduleApi = {
   /** Every schedule for a doctor, paused ones included. */
