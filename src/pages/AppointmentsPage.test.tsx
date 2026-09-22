@@ -151,8 +151,41 @@ describe('AppointmentsPage doctor-leave labelling', () => {
 
     render(<AppointmentsPage />);
 
-    expect(await screen.findByText(/no bookable slots this week/i)).toBeInTheDocument();
+    expect(await screen.findByText('No free slots this week')).toBeInTheDocument();
+    expect(screen.getByText(/have no working hours, or fall on public holidays/i)).toBeInTheDocument();
     expect(screen.queryByText(/on approved leave for the whole of this week/i)).not.toBeInTheDocument();
+  });
+
+  it('names the leave days when a partly-on-leave week has no free slots left', async () => {
+    // The reported bug: Monday's slots are past, Tuesday–Thursday and Sunday are leave, Friday and
+    // Saturday are unscheduled. No free slots means no grid rows, so no cells to say "On leave" in.
+    api.slot.available.mockResolvedValue([]);
+    api.leave.approved.mockResolvedValue([
+      leave(dayOfWeek(1), dayOfWeek(3)),
+      leave(dayOfWeek(6), dayOfWeek(6)),
+    ]);
+
+    render(<AppointmentsPage />);
+
+    // Wait for the chips, not the title: the generic empty state shares the title and shows
+    // briefly before the week's leave has loaded.
+    const chips = (await screen.findAllByText(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d/)).map(
+      (chip) => chip.textContent,
+    );
+    expect(screen.getByText('No free slots this week')).toBeInTheDocument();
+
+    const tue = dayOfWeek(1);
+    const thu = dayOfWeek(3);
+    const sun = dayOfWeek(6);
+    const month = (d: Date) => d.toLocaleDateString(undefined, { month: 'short' });
+    expect(chips).toEqual([
+      tue.getMonth() === thu.getMonth()
+        ? `Tue ${tue.getDate()} – Thu ${thu.getDate()} ${month(thu)}`
+        : `Tue ${tue.getDate()} ${month(tue)} – Thu ${thu.getDate()} ${month(thu)}`,
+      `Sun ${sun.getDate()} ${month(sun)}`,
+    ]);
+    expect(screen.queryByText(/on approved leave for the whole of this week/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/fall on public holidays/i)).not.toBeInTheDocument();
   });
 
   it('omits the reason from the tooltip when none was given', async () => {

@@ -279,7 +279,10 @@ export const DoctorLeavePage: React.FC = () => {
         <div className="card">
           <h2 className="detail-section-title">Pending approvals — all doctors</h2>
           {pending.length === 0 ? (
-            <p className="schedule-empty">Nothing awaiting a decision.</p>
+            <div className="schedule-empty schedule-empty--notice">
+              <p className="schedule-empty-title">No pending requests</p>
+              <p className="schedule-empty-hint">New leave requests will show up here for approval.</p>
+            </div>
           ) : (
             <table className="data-table">
               <thead>
@@ -333,7 +336,10 @@ export const DoctorLeavePage: React.FC = () => {
         {isLoading ? (
           <p className="schedule-empty">Loading…</p>
         ) : requests.length === 0 ? (
-          <p className="schedule-empty">No leave requests on record.</p>
+          <div className="schedule-empty schedule-empty--notice">
+            <p className="schedule-empty-title">No leave requests yet</p>
+            <p className="schedule-empty-hint">Submitted requests will show up here.</p>
+          </div>
         ) : (
           <table className="data-table">
             <thead>

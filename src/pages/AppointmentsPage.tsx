@@ -36,6 +36,16 @@ function addDays(date: Date, days: number): Date {
   return d;
 }
 
+/** "Sun 27 Sep", "Tue 22 – Thu 24 Sep", or "Wed 30 Sep – Thu 1 Oct" across a month end. */
+function dayRangeLabel(start: Date, end: Date): string {
+  const day = (d: Date) => `${DAY_NAMES[d.getDay()].slice(0, 3)} ${d.getDate()}`;
+  const month = (d: Date) => d.toLocaleDateString(undefined, { month: 'short' });
+
+  if (toDateOnly(start) === toDateOnly(end)) return `${day(start)} ${month(start)}`;
+  if (start.getMonth() === end.getMonth()) return `${day(start)} – ${day(end)} ${month(end)}`;
+  return `${day(start)} ${month(start)} – ${day(end)} ${month(end)}`;
+}
+
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object' && 'response' in err) {
     const axiosErr = err as {
@@ -208,6 +218,28 @@ export const AppointmentsPage: React.FC = () => {
     () => weekDays.length > 0 && weekDays.every((day) => leaveByDate.has(toDateOnly(day))),
     [weekDays, leaveByDate],
   );
+
+  /**
+   * The visible week's leave days as runs of consecutive dates.
+   *
+   * Leave cells can only be drawn inside time rows, and rows come from the week's free slots. A
+   * week partly on leave whose other days have no free slots — past, unscheduled or holidays —
+   * therefore has no rows to put them in, so the empty-week message names these runs instead.
+   */
+  const leaveRunsThisWeek = useMemo(() => {
+    const runs: { start: Date; end: Date; leave: DoctorLeaveResponse }[] = [];
+    for (const day of weekDays) {
+      const leave = leaveByDate.get(toDateOnly(day));
+      if (!leave) continue;
+      const last = runs[runs.length - 1];
+      if (last && last.leave.leaveId === leave.leaveId && toDateOnly(addDays(last.end, 1)) === toDateOnly(day)) {
+        last.end = day;
+      } else {
+        runs.push({ start: day, end: day, leave });
+      }
+    }
+    return runs;
+  }, [weekDays, leaveByDate]);
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -406,11 +438,30 @@ export const AppointmentsPage: React.FC = () => {
               : 'On approved leave'}{' '}
             for the whole of this week.
           </p>
+        ) : timeRows.length === 0 && leaveRunsThisWeek.length > 0 ? (
+          <div className="schedule-empty schedule-empty--notice">
+            <p className="schedule-empty-title">No free slots this week</p>
+            <div className="leave-days">
+              <span className="leave-days-label">On leave</span>
+              {leaveRunsThisWeek.map((run) => (
+                <span
+                  key={`${run.leave.leaveId}-${toDateOnly(run.start)}`}
+                  className="leave-day-chip"
+                  title={run.leave.reason ?? undefined}
+                >
+                  {dayRangeLabel(run.start, run.end)}
+                </span>
+              ))}
+            </div>
+            <p className="schedule-empty-hint">The other days are in the past or have no working hours.</p>
+          </div>
         ) : timeRows.length === 0 ? (
-          <p className="schedule-empty">
-            No bookable slots this week. The doctor may have no schedule covering these dates, or the
-            days may be public holidays or approved leave.
-          </p>
+          <div className="schedule-empty schedule-empty--notice">
+            <p className="schedule-empty-title">No free slots this week</p>
+            <p className="schedule-empty-hint">
+              These dates are in the past, have no working hours, or fall on public holidays.
+            </p>
+          </div>
         ) : (
           <div className="schedule-grid-scroll">
             <table className="schedule-grid">

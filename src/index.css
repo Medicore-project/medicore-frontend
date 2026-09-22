@@ -3657,6 +3657,49 @@ details[open] .rx-history-summary::before {
   font-weight: 600;
 }
 
+/* An empty state with a short title and a muted hint underneath. Also used for a week with no
+   free slots that is partly on leave, where the leave days are listed between the two. */
+.schedule-empty--notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.schedule-empty-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.schedule-empty-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.leave-days {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.leave-days-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-right: 0.15rem;
+}
+
+.leave-day-chip {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--accent-amber-border);
+  border-radius: var(--radius-pill);
+  background: var(--warning-bg);
+  color: var(--accent-amber-hover);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 /* The grid can exceed the viewport on narrow screens; scroll it rather than
    the page, so the surrounding layout stays put. */
 .schedule-grid-scroll {
