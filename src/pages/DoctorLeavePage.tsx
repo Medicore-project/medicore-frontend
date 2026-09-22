@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { leaveApi, toDateOnly } from '../api/appointments';
-import type { DoctorLeaveResponse, SlotReconciliationSummary } from '../api/appointments';
-import { staffApi } from '../api/staff';
-import type { StaffResponse } from '../api/staff';
+import { doctorApi, leaveApi, toDateOnly } from '../api/appointments';
+import type { DoctorLeaveResponse, DoctorResponse, SlotReconciliationSummary } from '../api/appointments';
 import { useAuth } from '../contexts/AuthContext';
 import { canApproveLeave, canRequestLeave } from '../utils/permissions';
 
@@ -55,10 +53,13 @@ function statusBadgeClass(status: string): string {
   }
 }
 
-function doctorName(doctors: StaffResponse[], id: string): string {
-  const match = doctors.find((d) => String(d.id) === id);
-  if (!match) return id.slice(0, 8);
-  return match.fullName || `${match.firstName} ${match.lastName}`;
+/**
+ * Only bookable doctors are listed, so a request from a doctor deactivated since falls back to a
+ * short id.
+ */
+function doctorName(doctors: DoctorResponse[], id: string): string {
+  const match = doctors.find((d) => d.doctorId === id);
+  return match ? match.fullName : id.slice(0, 8);
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -69,7 +70,8 @@ export const DoctorLeavePage: React.FC = () => {
   const canRequest = canRequestLeave(user?.role) && !!user?.staffId;
   const canApprove = canApproveLeave(user?.role);
 
-  const [doctors, setDoctors] = useState<StaffResponse[]>([]);
+  const [doctors, setDoctors] = useState<DoctorResponse[]>([]);
+  const [hasLoadedDoctors, setHasLoadedDoctors] = useState(false);
   const [doctorId, setDoctorId] = useState('');
   const [requests, setRequests] = useState<DoctorLeaveResponse[]>([]);
   const [pending, setPending] = useState<DoctorLeaveResponse[]>([]);
@@ -86,22 +88,33 @@ export const DoctorLeavePage: React.FC = () => {
     reason: '',
   });
 
+  // The doctor list comes from the appointment service's cache. A doctor missing from it —
+  // deactivated, or not yet synced from Identity — would have a request refused with 404, so say
+  // so up front instead.
+  const ownProfileNotBookable =
+    isDoctorRole &&
+    !!user?.staffId &&
+    hasLoadedDoctors &&
+    !doctors.some((d) => d.doctorId === user.staffId);
+
   // ── Loading ─────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const result = await staffApi.list({ role: 'Doctor', isActive: true, pageSize: 100 });
+        // From the appointment service's doctor cache, not Identity (SCRUM-33).
+        const result = await doctorApi.list();
         if (cancelled) return;
-        setDoctors(result.items ?? []);
+        setDoctors(result);
+        setHasLoadedDoctors(true);
         // A doctor can only ever see and act on their own leave — lock the selection to their own
         // staffId rather than letting them browse (and, before the ownership check existed, act on
         // behalf of) another doctor. Everyone else keeps free choice, to review any doctor's leave.
         if (isDoctorRole) {
           setDoctorId(user?.staffId ?? '');
-        } else if (result.items?.length) {
-          setDoctorId(String(result.items[0].id));
+        } else if (result.length) {
+          setDoctorId(result[0].doctorId);
         }
       } catch (err) {
         if (!cancelled) setError(extractErrorMessage(err, 'Failed to load doctors.'));
@@ -212,7 +225,7 @@ export const DoctorLeavePage: React.FC = () => {
             it — only then are the doctor&rsquo;s slots cleared.
           </p>
         </div>
-        {canRequest && doctorId && (
+        {canRequest && doctorId && !ownProfileNotBookable && (
           <button type="button" className="btn btn-primary" onClick={() => setShowForm(true)}>
             Request leave
           </button>
@@ -240,19 +253,22 @@ export const DoctorLeavePage: React.FC = () => {
             onChange={(e) => setDoctorId(e.target.value)}
             disabled={isDoctorRole || doctors.length === 0}
           >
-            {doctors.length === 0 && <option value="">No doctors found</option>}
+            {doctors.length === 0 && <option value="">No bookable doctors</option>}
+            {ownProfileNotBookable && <option value={doctorId}>You</option>}
             {doctors.map((d) => (
-              <option key={String(d.id)} value={String(d.id)}>
-                {d.fullName || `${d.firstName} ${d.lastName}`}
+              <option key={d.doctorId} value={d.doctorId}>
+                {d.fullName}
                 {d.specialization ? ` — ${d.specialization}` : ''}
               </option>
             ))}
           </select>
           {isDoctorRole && (
             <span className="field-help">
-              {user?.staffId
-                ? 'You can only view and request your own leave.'
-                : 'Your account has no linked staff profile, so you cannot request leave. Contact an administrator.'}
+              {!user?.staffId
+                ? 'Your account has no linked staff profile, so you cannot request leave. Contact an administrator.'
+                : ownProfileNotBookable
+                  ? 'Your profile is not bookable in the appointment service yet, so you cannot request new leave. Ask an administrator to sync doctors. Existing requests are shown below.'
+                  : 'You can only view and request your own leave.'}
             </span>
           )}
         </div>

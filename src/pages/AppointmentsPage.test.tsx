@@ -7,7 +7,7 @@ const api = vi.hoisted(() => ({
   slot: { available: vi.fn(), flagged: vi.fn(), block: vi.fn(), unblock: vi.fn() },
   schedule: { listForDoctor: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), regenerate: vi.fn() },
   leave: { approved: vi.fn() },
-  staff: { list: vi.fn() },
+  doctor: { list: vi.fn() },
 }));
 
 vi.mock('../api/appointments', async (importOriginal) => ({
@@ -16,9 +16,8 @@ vi.mock('../api/appointments', async (importOriginal) => ({
   slotApi: api.slot,
   scheduleApi: api.schedule,
   leaveApi: api.leave,
+  doctorApi: api.doctor,
 }));
-
-vi.mock('../api/staff', () => ({ staffApi: api.staff }));
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'u1', email: 'front@medicore.lk', role: 'Receptionist' } }),
@@ -78,15 +77,9 @@ function leave(start: Date, end: Date, reason: string | null = 'Conference'): Do
 
 beforeEach(() => {
   vi.clearAllMocks();
-  api.staff.list.mockResolvedValue({
-    items: [{ id: DOCTOR_ID, fullName: 'Tathira Samarakoon', firstName: 'Tathira', lastName: 'Samarakoon', email: 'doc@medicore.lk', role: 'Doctor', isActive: true, specialization: 'Neurology' }],
-    totalCount: 1,
-    page: 1,
-    pageSize: 100,
-    totalPages: 1,
-    hasPreviousPage: false,
-    hasNextPage: false,
-  });
+  api.doctor.list.mockResolvedValue([
+    { doctorId: DOCTOR_ID, fullName: 'Tathira Samarakoon', specialization: 'Neurology', departmentId: 'dept-1' },
+  ]);
   api.slot.flagged.mockResolvedValue([]);
   api.schedule.listForDoctor.mockResolvedValue([]);
   api.slot.available.mockResolvedValue([]);
@@ -174,5 +167,27 @@ describe('AppointmentsPage doctor-leave labelling', () => {
       'title',
       `On approved leave (${dateOnly(tuesday)} to ${dateOnly(tuesday)})`,
     );
+  });
+});
+
+describe('AppointmentsPage doctor picker (SCRUM-33)', () => {
+  it('lists doctors from the appointment service cache and opens the first one', async () => {
+    render(<AppointmentsPage />);
+
+    expect(
+      await screen.findByRole('option', { name: 'Tathira Samarakoon — Neurology' }),
+    ).toBeInTheDocument();
+    expect(api.doctor.list).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(api.slot.available).toHaveBeenCalled());
+    expect(api.slot.available.mock.calls[0][0]).toBe(DOCTOR_ID);
+  });
+
+  it('says there are no bookable doctors when the cache is empty', async () => {
+    api.doctor.list.mockResolvedValue([]);
+
+    render(<AppointmentsPage />);
+
+    expect(await screen.findByRole('option', { name: 'No bookable doctors' })).toBeInTheDocument();
+    expect(api.slot.available).not.toHaveBeenCalled();
   });
 });

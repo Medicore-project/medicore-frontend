@@ -1,15 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { DAY_NAMES, colomboTimeLabel, leaveApi, scheduleApi, slotApi, toDateOnly } from '../api/appointments';
+import {
+  DAY_NAMES,
+  colomboTimeLabel,
+  doctorApi,
+  leaveApi,
+  scheduleApi,
+  slotApi,
+  toDateOnly,
+} from '../api/appointments';
 import type {
   CreateScheduleBody,
   DayOfWeekNumber,
   DoctorLeaveResponse,
+  DoctorResponse,
   DoctorScheduleResponse,
   SlotReconciliationSummary,
   SlotResponse,
 } from '../api/appointments';
-import { staffApi } from '../api/staff';
-import type { StaffResponse } from '../api/staff';
 import { useAuth } from '../contexts/AuthContext';
 import { canManageSchedules } from '../utils/permissions';
 
@@ -79,7 +86,7 @@ export const AppointmentsPage: React.FC = () => {
   const { user } = useAuth();
   const canManage = canManageSchedules(user?.role);
 
-  const [doctors, setDoctors] = useState<StaffResponse[]>([]);
+  const [doctors, setDoctors] = useState<DoctorResponse[]>([]);
   const [doctorId, setDoctorId] = useState<string>('');
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
 
@@ -109,10 +116,12 @@ export const AppointmentsPage: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const result = await staffApi.list({ role: 'Doctor', isActive: true, pageSize: 100 });
+        // From the appointment service's doctor cache, not Identity, so the booking grid still
+        // loads while Identity is down (SCRUM-33). Only bookable doctors are returned.
+        const result = await doctorApi.list();
         if (cancelled) return;
-        setDoctors(result.items ?? []);
-        if (result.items?.length) setDoctorId(String(result.items[0].id));
+        setDoctors(result);
+        if (result.length) setDoctorId(result[0].doctorId);
       } catch (err) {
         if (!cancelled) setError(extractErrorMessage(err, 'Failed to load doctors.'));
       } finally {
@@ -301,7 +310,7 @@ export const AppointmentsPage: React.FC = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  const selectedDoctor = doctors.find((d) => String(d.id) === doctorId);
+  const selectedDoctor = doctors.find((d) => d.doctorId === doctorId);
   const weekLabel = `${weekStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${addDays(
     weekStart,
     6,
@@ -345,10 +354,10 @@ export const AppointmentsPage: React.FC = () => {
             onChange={(e) => setDoctorId(e.target.value)}
             disabled={isLoadingDoctors || doctors.length === 0}
           >
-            {doctors.length === 0 && <option value="">No doctors found</option>}
+            {doctors.length === 0 && <option value="">No bookable doctors</option>}
             {doctors.map((d) => (
-              <option key={String(d.id)} value={String(d.id)}>
-                {d.fullName || `${d.firstName} ${d.lastName}`}
+              <option key={d.doctorId} value={d.doctorId}>
+                {d.fullName}
                 {d.specialization ? ` — ${d.specialization}` : ''}
               </option>
             ))}
@@ -385,7 +394,7 @@ export const AppointmentsPage: React.FC = () => {
       {/* ── Weekly grid ── */}
       <div className="card schedule-grid-card">
         <h2 className="detail-section-title">
-          {selectedDoctor ? selectedDoctor.fullName || `${selectedDoctor.firstName} ${selectedDoctor.lastName}` : 'Week'}
+          {selectedDoctor ? selectedDoctor.fullName : 'Week'}
         </h2>
 
         {isLoadingWeek ? (
@@ -393,7 +402,7 @@ export const AppointmentsPage: React.FC = () => {
         ) : timeRows.length === 0 && weekFullyOnLeave ? (
           <p className="schedule-empty schedule-empty--leave">
             {selectedDoctor
-              ? `${selectedDoctor.fullName || `${selectedDoctor.firstName} ${selectedDoctor.lastName}`} is on approved leave`
+              ? `${selectedDoctor.fullName} is on approved leave`
               : 'On approved leave'}{' '}
             for the whole of this week.
           </p>
