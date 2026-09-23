@@ -18,6 +18,7 @@ import type {
   SlotResponse,
 } from '../api/appointments';
 import { useAuth } from '../contexts/AuthContext';
+import { extractErrorMessage } from '../utils/apiError';
 import { canManageSchedules } from '../utils/permissions';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -44,26 +45,6 @@ function dayRangeLabel(start: Date, end: Date): string {
   if (toDateOnly(start) === toDateOnly(end)) return `${day(start)} ${month(start)}`;
   if (start.getMonth() === end.getMonth()) return `${day(start)} – ${day(end)} ${month(end)}`;
   return `${day(start)} ${month(start)} – ${day(end)} ${month(end)}`;
-}
-
-function extractErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const axiosErr = err as {
-      response?: { status?: number; data?: { title?: string; detail?: string; errors?: Record<string, string[]> } };
-    };
-    const data = axiosErr.response?.data;
-    if (data?.errors) {
-      const first = Object.values(data.errors)[0];
-      if (first?.length) return first[0];
-    }
-    if (data?.title) return data.title;
-    if (data?.detail) return data.detail;
-    if (axiosErr.response?.status === 403) {
-      return 'You do not have permission to do that.';
-    }
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
 }
 
 function describeImpact(impact: SlotReconciliationSummary): string {
