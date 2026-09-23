@@ -73,3 +73,11 @@ export const CLINIC_ROLES = ['Admin', 'Receptionist', 'Doctor', 'Nurse'] as cons
  * branch is front-desk only. This constant controls navigation, not authority.
  */
 export const BOOKING_ROLES = ['Admin', 'Receptionist', 'Patient'] as const;
+
+/**
+ * Where a signed-in user belongs. Staff land on the dashboard; a Patient reaches booking and
+ * nothing else, so sending them to the staff-only dashboard would only bounce them back to `/`.
+ */
+export function homePathFor(role?: string): string {
+  return role === 'Patient' ? '/appointments/book' : '/dashboard';
+}

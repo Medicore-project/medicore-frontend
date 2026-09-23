@@ -12,6 +12,7 @@ import {
   canManageSchedules,
   canRequestLeave,
   canWriteMedicalRecords,
+  homePathFor,
 } from './permissions';
 
 const ALL_ROLES = ['Admin', 'Receptionist', 'Doctor', 'Nurse'] as const;
@@ -102,5 +103,17 @@ describe('the Patient role (SCRUM-34)', () => {
 
   it('is not one of the clinic roles', () => {
     expect([...CLINIC_ROLES].sort()).toEqual(['Admin', 'Doctor', 'Nurse', 'Receptionist']);
+  });
+});
+
+describe('homePathFor', () => {
+  it('sends a patient to booking, the only page their role reaches', () => {
+    // The dashboard is CLINIC_ROLES only; sending a patient there would bounce them straight to /.
+    expect(homePathFor('Patient')).toBe('/appointments/book');
+    expect(BOOKING_ROLES).toContain('Patient');
+  });
+
+  it('sends every clinic role to the dashboard', () => {
+    CLINIC_ROLES.forEach((role) => expect(homePathFor(role)).toBe('/dashboard'));
   });
 });

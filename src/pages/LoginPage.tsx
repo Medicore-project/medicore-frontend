@@ -1,18 +1,20 @@
 import React, { useState, type FormEvent } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { homePathFor } from '../utils/permissions';
 
 export const LoginPage: React.FC = () => {
-  const { login, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const { login, isAuthenticated, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Also the post-login redirect: a successful login flips isAuthenticated and sets the user in
+  // the same render, so this picks the destination from the role that just signed in.
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={homePathFor(user?.role)} replace />;
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -22,7 +24,6 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -121,6 +122,10 @@ export const LoginPage: React.FC = () => {
 
           <p className="login-security-note">
             <span aria-hidden="true">✦</span> Protected access for authorised MediCore staff.
+          </p>
+          <p className="login-patient-note">
+            Here to see a doctor? You don&rsquo;t need an account —{' '}
+            <Link to="/book" data-testid="login-book-link">book an appointment</Link>.
           </p>
         </div>
       </section>
