@@ -20,6 +20,7 @@ import DoctorLeavePage from './pages/DoctorLeavePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
+import PublicBookingPage from './pages/PublicBookingPage';
 import {
   FRONT_DESK_ROLES,
   LEAVE_READER_ROLES,
@@ -32,6 +33,10 @@ export const App: React.FC = () => {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      {/* Public on purpose: a patient books without an account, identifying themselves with their
+          patient number and date of birth instead. The booking endpoint still requires a token —
+          one the patient service mints once they have done so. */}
+      <Route path="/book" element={<PublicBookingPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />

@@ -3862,3 +3862,122 @@ details[open] .rx-history-summary::before {
   outline: none;
   border-color: var(--border-focus);
 }
+
+/* ── Public booking (SCRUM-34) ─────────────────────────────────────────────── */
+
+/* Outside the authenticated shell: this page has no sidebar, so it centres itself. */
+.public-booking-page {
+  min-height: 100vh;
+  background: var(--bg-subtle);
+  padding: 32px 16px 64px;
+}
+
+.public-booking-header,
+.public-booking-body {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.public-booking-header {
+  margin-bottom: 24px;
+}
+
+.public-booking-brand {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.public-booking-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.75rem;
+}
+
+.booking-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.booking-step {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.booking-step h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.booking-step .page-subtitle {
+  margin: -12px 0 0;
+}
+
+.booking-step fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.booking-step legend {
+  padding: 0 0 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Two fields side by side, stacking on a phone. */
+.booking-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.booking-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.booking-day + .booking-day {
+  margin-top: 8px;
+}
+
+.booking-day-label {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.booking-slot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.booking-slot {
+  min-width: 76px;
+}
+
+.booking-summary {
+  margin: 0;
+}
+
+.booking-billing-notice {
+  padding: 12px 14px;
+  border: 1px solid var(--accent-amber-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-bg);
+}
+
+@media (max-width: 768px) {
+  .booking-field-row {
+    grid-template-columns: 1fr;
+  }
+}
