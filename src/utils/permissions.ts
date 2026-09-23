@@ -56,3 +56,20 @@ export function canRequestLeave(role?: string): boolean {
 export function canApproveLeave(role?: string): boolean {
   return role === 'Admin';
 }
+
+/**
+ * Every role that works in the clinic. Excludes Patient, the only non-staff role — a patient has
+ * no business on the dashboard, the patient directory or the schedule grid.
+ */
+export const CLINIC_ROLES = ['Admin', 'Receptionist', 'Doctor', 'Nurse'] as const;
+
+/**
+ * Who reaches the in-app booking page.
+ *
+ * Mirrors the appointment service's BookingCreator policy on its role half (Admin, Receptionist),
+ * plus Patient so a logged-in patient reaches booking and nothing else. Note that the Patient role
+ * grants no API permission of its own: a patient books with a booking token from
+ * /api/patients/identify, exactly as an anonymous visitor does, because BookingCreator's role
+ * branch is front-desk only. This constant controls navigation, not authority.
+ */
+export const BOOKING_ROLES = ['Admin', 'Receptionist', 'Patient'] as const;

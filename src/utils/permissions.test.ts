@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BOOKING_ROLES,
+  CLINIC_ROLES,
+  FRONT_DESK_ROLES,
   LEAVE_READER_ROLES,
+  PATIENT_READER_ROLES,
   SCHEDULE_READER_ROLES,
   canApproveLeave,
+  canManageOrganization,
+  canManagePatientProfiles,
+  canManageSchedules,
   canRequestLeave,
+  canWriteMedicalRecords,
 } from './permissions';
 
 const ALL_ROLES = ['Admin', 'Receptionist', 'Doctor', 'Nurse'] as const;
@@ -59,5 +67,40 @@ describe('leave role sets mirror the appointment service policies', () => {
     const excluded = SCHEDULE_READER_ROLES.filter((role) => !leaveReaders.has(role));
 
     expect(excluded.sort()).toEqual(['Nurse', 'Receptionist']);
+  });
+});
+
+describe('the Patient role (SCRUM-34)', () => {
+  it('reaches booking, and only booking', () => {
+    expect([...BOOKING_ROLES].sort()).toEqual(['Admin', 'Patient', 'Receptionist']);
+  });
+
+  it('appears in no other role set', () => {
+    // The whole of the "gate only" decision, asserted rather than assumed. A patient signs in to
+    // book; everything else in the app is clinic staff's.
+    const otherSets = {
+      PATIENT_READER_ROLES,
+      FRONT_DESK_ROLES,
+      SCHEDULE_READER_ROLES,
+      LEAVE_READER_ROLES,
+      CLINIC_ROLES,
+    };
+
+    Object.entries(otherSets).forEach(([name, roles]) => {
+      expect([name, (roles as readonly string[]).includes('Patient')]).toEqual([name, false]);
+    });
+  });
+
+  it('is granted no capability by any permission helper', () => {
+    expect(canWriteMedicalRecords('Patient')).toBe(false);
+    expect(canManagePatientProfiles('Patient')).toBe(false);
+    expect(canManageOrganization('Patient')).toBe(false);
+    expect(canManageSchedules('Patient')).toBe(false);
+    expect(canRequestLeave('Patient')).toBe(false);
+    expect(canApproveLeave('Patient')).toBe(false);
+  });
+
+  it('is not one of the clinic roles', () => {
+    expect([...CLINIC_ROLES].sort()).toEqual(['Admin', 'Doctor', 'Nurse', 'Receptionist']);
   });
 });

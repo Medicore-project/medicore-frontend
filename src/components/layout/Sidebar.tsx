@@ -2,6 +2,8 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
+  BOOKING_ROLES,
+  CLINIC_ROLES,
   FRONT_DESK_ROLES,
   LEAVE_READER_ROLES,
   PATIENT_READER_ROLES,
@@ -22,12 +24,13 @@ const navItems: Array<{
   end?: boolean;
   allowedRoles?: readonly string[];
 }> = [
-  { name: 'Dashboard', path: '/dashboard' },
+  { name: 'Dashboard', path: '/dashboard', allowedRoles: CLINIC_ROLES },
   { name: 'Departments', path: '/departments', allowedRoles: FRONT_DESK_ROLES },
   { name: 'Specializations', path: '/specializations', allowedRoles: FRONT_DESK_ROLES },
   { name: 'Staff', path: '/staff', allowedRoles: ['Admin'] },
   { name: 'Patients', path: '/patients', allowedRoles: PATIENT_READER_ROLES },
   { name: 'Appointments', path: '/appointments', end: true, allowedRoles: SCHEDULE_READER_ROLES },
+  { name: 'Book Appointment', path: '/appointments/book', allowedRoles: BOOKING_ROLES },
   { name: 'Doctor Leave', path: '/appointments/leave', allowedRoles: LEAVE_READER_ROLES },
   { name: 'Audit Reports', path: '/reports/audit', allowedRoles: ['Admin'] },
   { name: 'Demographics Report', path: '/reports/demographics', allowedRoles: ['Admin'] },

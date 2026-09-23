@@ -48,10 +48,59 @@ describe('Sidebar doctor-leave tab', () => {
     }
   });
 
-  it('offers nothing role-gated when there is no user', () => {
+  it('offers nothing at all when there is no user', () => {
+    // Every tab is role-gated now that Dashboard is clinic-only, so an unauthenticated shell
+    // renders an empty nav rather than a link that would bounce straight back.
     renderAs(undefined);
 
-    expect(screen.queryByRole('link', { name: 'Doctor Leave' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+});
+
+describe('Sidebar booking tab (SCRUM-34)', () => {
+  it('is the only thing a signed-in patient is offered', () => {
+    // The whole of the "gate only" decision as a patient experiences it: one tab, nothing else.
+    renderAs('Patient');
+
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent('Book Appointment');
+  });
+
+  it.each(['Dashboard', 'Patients', 'Appointments', 'Doctor Leave', 'Staff'])(
+    'keeps %s away from a patient',
+    (tab) => {
+      renderAs('Patient');
+
+      expect(screen.queryByRole('link', { name: tab })).not.toBeInTheDocument();
+    },
+  );
+
+  it('is offered to the front desk, who book on a patient behalf', () => {
+    for (const role of ['Admin', 'Receptionist']) {
+      renderAs(role);
+      expect(screen.getByRole('link', { name: 'Book Appointment' })).toBeInTheDocument();
+      document.body.innerHTML = '';
+    }
+  });
+
+  it.each(['Doctor', 'Nurse'])('is hidden from %s, who do not take bookings', (role) => {
+    renderAs(role);
+
+    expect(screen.queryByRole('link', { name: 'Book Appointment' })).not.toBeInTheDocument();
+  });
+
+  it('does not steal the active state from the schedule grid', () => {
+    // /appointments is marked `end`, so opening /appointments/book must not light both tabs.
+    renderAs('Receptionist');
+
+    expect(screen.getByRole('link', { name: 'Appointments' })).toHaveAttribute(
+      'href',
+      '/appointments',
+    );
+    expect(screen.getByRole('link', { name: 'Book Appointment' })).toHaveAttribute(
+      'href',
+      '/appointments/book',
+    );
   });
 });
