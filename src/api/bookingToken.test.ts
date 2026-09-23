@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  BOOKING_TOKEN_PATHS,
+  BOOKING_TOKEN_ROUTES,
   bookingTokenExpiresAt,
   clearBookingToken,
   getBookingToken,
-  isBookingTokenPath,
+  isBookingTokenRequest,
   setBookingToken,
 } from './bookingToken';
 
@@ -77,18 +77,30 @@ describe('the booking token store (SCRUM-34)', () => {
     expect(getBookingToken()).toBeNull();
   });
 
-  it('claims only the booking endpoint', () => {
-    expect(BOOKING_TOKEN_PATHS).toEqual(['/appointment/api/appointments']);
+  it('claims only booking and reading your own bookings', () => {
+    expect(BOOKING_TOKEN_ROUTES).toEqual([
+      { method: 'post', path: '/appointment/api/appointments' },
+      { method: 'get', path: '/appointment/api/appointments/mine' },
+    ]);
 
-    expect(isBookingTokenPath('/appointment/api/appointments')).toBe(true);
-    expect(isBookingTokenPath('/appointment/api/appointments/abc-123')).toBe(true);
+    expect(isBookingTokenRequest('post', '/appointment/api/appointments')).toBe(true);
+    expect(isBookingTokenRequest('get', '/appointment/api/appointments/mine')).toBe(true);
+    expect(isBookingTokenRequest('GET', '/appointment/api/appointments/mine')).toBe(true);
 
     // The reads the public page makes before anyone has identified themselves need no credential.
-    expect(isBookingTokenPath('/appointment/api/public/booking/doctors')).toBe(false);
-    expect(isBookingTokenPath('/appointment/api/public/booking/slots')).toBe(false);
+    expect(isBookingTokenRequest('get', '/appointment/api/public/booking/doctors')).toBe(false);
+    expect(isBookingTokenRequest('get', '/appointment/api/public/booking/slots')).toBe(false);
     // And a receptionist's own work must never carry it.
-    expect(isBookingTokenPath('/patient/api/patients/search')).toBe(false);
-    expect(isBookingTokenPath('/appointment/api/schedules')).toBe(false);
-    expect(isBookingTokenPath(undefined)).toBe(false);
+    expect(isBookingTokenRequest('get', '/patient/api/patients/search')).toBe(false);
+    expect(isBookingTokenRequest('get', '/appointment/api/schedules')).toBe(false);
+    expect(isBookingTokenRequest('get', undefined)).toBe(false);
+  });
+
+  it('keeps the staff appointment list, on the same path as booking, on the staff token', () => {
+    // GET and POST /appointments are different endpoints with different audiences. A receptionist
+    // who just booked for a patient still holds that patient's token; the list must not carry it.
+    expect(isBookingTokenRequest('get', '/appointment/api/appointments')).toBe(false);
+    expect(isBookingTokenRequest('get', '/appointment/api/appointments?doctorId=x&from=2026-09-21')).toBe(false);
+    expect(isBookingTokenRequest('get', '/appointment/api/appointments/abc-123')).toBe(false);
   });
 });

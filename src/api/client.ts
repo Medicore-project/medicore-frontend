@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { getBookingToken, isBookingTokenPath } from './bookingToken';
+import { getBookingToken, isBookingTokenRequest } from './bookingToken';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -32,8 +32,8 @@ apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Booking is the one path that may be reached by a patient with no account, so it takes the
     // booking token when there is one. Everything else keeps using the signed-in staff token —
-    // see BOOKING_TOKEN_PATHS for why this is an allow-list and not "whichever token exists".
-    const bookingToken = isBookingTokenPath(config.url) ? getBookingToken() : null;
+    // see BOOKING_TOKEN_ROUTES for why this is an allow-list and not "whichever token exists".
+    const bookingToken = isBookingTokenRequest(config.method, config.url) ? getBookingToken() : null;
 
     if (bookingToken) {
       config.headers.Authorization = `Bearer ${bookingToken}`;
@@ -65,7 +65,7 @@ apiClient.interceptors.response.use(
     // and destructive for a receptionist whose *staff* session would be thrown away because their
     // *booking* token expired. The booking flow handles its own 401 by asking the patient to
     // identify again.
-    if (isBookingTokenPath(originalRequest.url)) {
+    if (isBookingTokenRequest(originalRequest.method, originalRequest.url)) {
       return Promise.reject(error);
     }
 

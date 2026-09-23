@@ -84,6 +84,30 @@ describe('the api client and the booking token (SCRUM-34)', () => {
     expect(seen[0].headers.Authorization).toBe('Bearer staff-token');
   });
 
+  it('keeps the staff appointment list on the staff token while a booking token is held', async () => {
+    // Same path as booking, different endpoint: a receptionist who has just booked for a patient
+    // still holds that patient's token, and the list refuses it.
+    const { seen, adapter } = captureAdapter();
+    const { apiClient, bookingToken } = await loadClient(adapter);
+    localStorage.setItem('access_token', 'staff-token');
+    bookingToken.setBookingToken('a-booking-token', VALID_EXPIRY);
+
+    await apiClient.get('/appointment/api/appointments', { params: { from: '2026-09-21' } });
+
+    expect(seen[0].headers.Authorization).toBe('Bearer staff-token');
+  });
+
+  it('sends the booking token to read your own bookings', async () => {
+    const { seen, adapter } = captureAdapter();
+    const { apiClient, bookingToken } = await loadClient(adapter);
+    localStorage.setItem('access_token', 'staff-token');
+    bookingToken.setBookingToken('a-booking-token', VALID_EXPIRY);
+
+    await apiClient.get('/appointment/api/appointments/mine');
+
+    expect(seen[0].headers.Authorization).toBe('Bearer a-booking-token');
+  });
+
   it('sends no credential at all to the public reads', async () => {
     const { seen, adapter } = captureAdapter();
     const { apiClient } = await loadClient(adapter);

@@ -3632,6 +3632,20 @@ details[open] .rx-history-summary::before {
   min-width: 260px;
 }
 
+/* Four filters rather than one select and a week nav, so they sit left and narrower. */
+.clinic-appointments-filters {
+  justify-content: flex-start;
+  gap: 1rem;
+}
+
+.clinic-appointments-filters .form-group {
+  min-width: 160px;
+}
+
+.clinic-appointments-filters .form-group:first-child {
+  min-width: 260px;
+}
+
 .schedule-week-nav {
   display: flex;
   align-items: center;
@@ -3808,6 +3822,31 @@ details[open] .rx-history-summary::before {
   border-color: var(--primary-light);
 }
 
+/* A booked cell names the patient. Not a button — a booked slot cannot be blocked — so it drops
+   the pointer, and long names are cut rather than widening the whole grid column. */
+.slot-chip--patient {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  cursor: default;
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+}
+
+.slot-chip-patient,
+.slot-chip-number {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-chip-number {
+  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
 .slot-chip--blocked {
   background: var(--bg-muted);
   color: var(--text-muted);
@@ -3979,6 +4018,38 @@ details[open] .rx-history-summary::before {
 
 .booking-summary {
   margin: 0;
+}
+
+.booking-upcoming h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.booking-upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.booking-upcoming-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.booking-upcoming-when {
+  font-weight: 600;
+}
+
+.booking-upcoming-who {
+  color: var(--text-secondary);
 }
 
 .booking-billing-notice {

@@ -104,3 +104,23 @@ describe('Sidebar booking tab (SCRUM-34)', () => {
     );
   });
 });
+
+describe('Sidebar booked-appointments tab', () => {
+  it('is offered to the front desk, who answer "who booked?"', () => {
+    for (const role of ['Admin', 'Receptionist']) {
+      renderAs(role);
+      expect(screen.getByRole('link', { name: 'Booked Appointments' })).toHaveAttribute(
+        'href',
+        '/appointments/booked',
+      );
+      document.body.innerHTML = '';
+    }
+  });
+
+  it.each(['Doctor', 'Nurse', 'Patient'])('is hidden from %s', (role) => {
+    // Doctor and Nurse see bookings on the weekly grid; a patient sees only their own, on /book.
+    renderAs(role);
+
+    expect(screen.queryByRole('link', { name: 'Booked Appointments' })).not.toBeInTheDocument();
+  });
+});

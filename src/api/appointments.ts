@@ -93,6 +93,31 @@ export interface SlotResponse {
   flaggedAtUtc?: string | null;
 }
 
+/**
+ * One booking as clinic staff see it. The patient's number and name were copied off the booking
+ * token when it was made, so they are null only for a booking made with a bare patient id.
+ */
+export interface AppointmentSummary {
+  appointmentId: string;
+  patientId: string;
+  patientNumber: string | null;
+  patientName: string | null;
+  doctorId: string;
+  /** Null only when the appointment service's doctor cache has never heard of the doctor. */
+  doctorName: string | null;
+  specialization: string | null;
+  slotId: string;
+  startUtc: string;
+  endUtc: string;
+  /** Colombo calendar date, `YYYY-MM-DD`. */
+  slotDate: string;
+  durationMinutes: number;
+  serviceCode: string;
+  /** `Booked`, `Cancelled` or `Completed`. */
+  status: string;
+  createdAt: string;
+}
+
 export interface PublicHolidayResponse {
   holidayId: string;
   date: string;
@@ -170,6 +195,7 @@ const schedulesPath = '/appointment/api/schedules';
 const slotsPath = '/appointment/api/slots';
 const holidaysPath = '/appointment/api/holidays';
 const leavesPath = '/appointment/api/doctor-leaves';
+const appointmentsPath = '/appointment/api/appointments';
 
 export const doctorApi = {
   /** Bookable doctors ordered by name, optionally narrowed to one specialization. */
@@ -254,6 +280,23 @@ export const slotApi = {
   /** Returns a blocked slot to bookable. */
   async unblock(slotId: string): Promise<SlotResponse> {
     const response = await apiClient.patch<SlotResponse>(`${slotsPath}/${slotId}/unblock`);
+    return response.data;
+  },
+};
+
+export const bookedApi = {
+  /**
+   * What is booked on Colombo dates `from`..`to` inclusive — one doctor's, or the whole clinic's
+   * when `doctorId` is omitted. Every status comes back; callers decide what to show. The service
+   * refuses a range wider than 92 days.
+   *
+   * Always sent with the *staff* token: GET here is a different endpoint from booking, and
+   * `isBookingTokenRequest` keeps a held booking token off it.
+   */
+  async list(params: { doctorId?: string; from: string; to: string }): Promise<AppointmentSummary[]> {
+    const query = new URLSearchParams({ from: params.from, to: params.to });
+    if (params.doctorId) query.set('doctorId', params.doctorId);
+    const response = await apiClient.get<AppointmentSummary[]>(`${appointmentsPath}?${query.toString()}`);
     return response.data;
   },
 };

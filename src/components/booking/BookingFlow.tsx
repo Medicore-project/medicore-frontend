@@ -8,7 +8,12 @@ import {
   isIdentityNotFoundError,
   publicBookingApi,
 } from '../../api/booking';
-import type { AppointmentResponse, PublicDoctor, PublicSlot } from '../../api/booking';
+import type {
+  AppointmentResponse,
+  PatientAppointment,
+  PublicDoctor,
+  PublicSlot,
+} from '../../api/booking';
 import { clearBookingToken } from '../../api/bookingToken';
 import { extractErrorMessage } from '../../utils/apiError';
 import {
@@ -23,6 +28,7 @@ import ConfirmStep from './ConfirmStep';
 import IdentifyStep from './IdentifyStep';
 import RegisterStep from './RegisterStep';
 import SlotPicker from './SlotPicker';
+import UpcomingAppointments from './UpcomingAppointments';
 
 /** What the service records when nothing else is chosen. Mirrors ServiceCodes.GeneralConsultation. */
 const DEFAULT_SERVICE_CODE = 'GEN-CONSULT';
@@ -69,6 +75,11 @@ const BookingFlow: React.FC = () => {
   const [slots, setSlots] = useState<PublicSlot[]>([]);
   const [isLoadingDoctors, setIsLoadingDoctors] = useState(false);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+
+  // The identified patient's own upcoming bookings. Null until loaded, and left null when loading
+  // fails — seeing past bookings is a convenience and must never stand between a patient and a
+  // new one, so a failure here shows nothing rather than an error.
+  const [upcoming, setUpcoming] = useState<PatientAppointment[] | null>(null);
 
   // ── Data loading ────────────────────────────────────────────────────────────
 
@@ -125,12 +136,20 @@ const BookingFlow: React.FC = () => {
     }
   }, []);
 
+  const loadUpcoming = useCallback(async () => {
+    try {
+      setUpcoming(await appointmentApi.mine());
+    } catch {
+      setUpcoming(null);
+    }
+  }, []);
+
   /** Everything that has to happen once we know who the patient is. */
   const goToChoosing = useCallback(async () => {
     setStep({ kind: 'choose' });
-    const found = await loadDoctors(specialization);
+    const [found] = await Promise.all([loadDoctors(specialization), loadUpcoming()]);
     if (found.length === 1) await loadSlots(found[0].doctorId);
-  }, [loadDoctors, loadSlots, specialization]);
+  }, [loadDoctors, loadSlots, loadUpcoming, specialization]);
 
   // ── Identify / register ─────────────────────────────────────────────────────
 
@@ -243,12 +262,14 @@ const BookingFlow: React.FC = () => {
     try {
       const appointment = await appointmentApi.book(step.slot.slotId, DEFAULT_SERVICE_CODE);
       setStep({ kind: 'booked', appointment, doctor: step.doctor });
+      await loadUpcoming();
     } catch (err) {
       if (isBookingSessionExpiredError(err)) {
         // The token cannot be refreshed — an anonymous visitor has no refresh token. Ask them to
         // identify again, keeping anything they typed.
         clearBookingToken();
         setIdentity(null);
+        setUpcoming(null);
         setStep({ kind: 'identify' });
         setStepError('Your booking session expired. Please identify yourself again.');
       } else {
@@ -317,6 +338,10 @@ const BookingFlow: React.FC = () => {
             setStep({ kind: 'identify' });
           }}
         />
+      )}
+
+      {identity && upcoming && (step.kind === 'choose' || step.kind === 'booked') && (
+        <UpcomingAppointments appointments={upcoming} />
       )}
 
       {step.kind === 'choose' && (

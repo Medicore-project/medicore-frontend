@@ -49,6 +49,8 @@ export interface BookingIdentityResponse {
 export interface AppointmentResponse {
   appointmentId: string;
   patientId: string;
+  patientNumber: string | null;
+  patientName: string | null;
   doctorId: string;
   slotId: string;
   startUtc: string;
@@ -58,6 +60,22 @@ export interface AppointmentResponse {
   serviceCode: string;
   status: string;
   createdAt: string;
+}
+
+/**
+ * One of the identified patient's own upcoming bookings. Reduced by the service: no patient id and
+ * no slot id — the patient knows who they are; what they need is with whom and when.
+ */
+export interface PatientAppointment {
+  appointmentId: string;
+  doctorName: string | null;
+  specialization: string | null;
+  startUtc: string;
+  endUtc: string;
+  slotDate: string;
+  durationMinutes: number;
+  serviceCode: string;
+  status: string;
 }
 
 // ── Public reads (no credential) ──────────────────────────────────────────────
@@ -126,6 +144,15 @@ export const appointmentApi = {
       slotId,
       serviceCode,
     });
+    return data;
+  },
+
+  /**
+   * The held booking token's patient's upcoming bookings. Takes no patient id: the service reads
+   * it from the token, so this can only ever return the bookings of whoever identified.
+   */
+  async mine(): Promise<PatientAppointment[]> {
+    const { data } = await apiClient.get<PatientAppointment[]>(`${appointmentsPath}/mine`);
     return data;
   },
 };

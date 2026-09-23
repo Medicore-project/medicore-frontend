@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   },
   appointment: {
     book: vi.fn(),
+    mine: vi.fn(),
   },
   clearBookingToken: vi.fn(),
 }));
@@ -64,6 +65,8 @@ const IDENTITY = {
 const APPOINTMENT = {
   appointmentId: 'a-1',
   patientId: 'p-1',
+  patientNumber: 'PAT-000123',
+  patientName: 'Nimal Perera',
   doctorId: 'doctor-1',
   slotId: 'slot-1',
   startUtc: `${tomorrow()}T03:30:00Z`,
@@ -73,6 +76,18 @@ const APPOINTMENT = {
   serviceCode: 'GEN-CONSULT',
   status: 'Booked',
   createdAt: `${tomorrow()}T00:00:00Z`,
+};
+
+const UPCOMING = {
+  appointmentId: 'a-0',
+  doctorName: 'Nimal Perera',
+  specialization: 'Neurology',
+  startUtc: `${tomorrow()}T03:30:00Z`,
+  endUtc: `${tomorrow()}T04:00:00Z`,
+  slotDate: tomorrow(),
+  durationMinutes: 30,
+  serviceCode: 'GEN-CONSULT',
+  status: 'Booked',
 };
 
 function rejectWith(status: number, title?: string) {
@@ -119,6 +134,7 @@ describe('BookingFlow (SCRUM-34)', () => {
     api.identity.identify.mockResolvedValue(IDENTITY);
     api.identity.publicRegister.mockResolvedValue({ ...IDENTITY, patientNumber: 'PAT-000456' });
     api.appointment.book.mockResolvedValue(APPOINTMENT);
+    api.appointment.mine.mockResolvedValue([]);
   });
 
   // ── Identifying ─────────────────────────────────────────────────────────────
@@ -133,6 +149,60 @@ describe('BookingFlow (SCRUM-34)', () => {
     expect(await screen.findByTestId('patient-number')).toHaveTextContent('PAT-000123');
     expect(await screen.findByLabelText('Doctor')).toBeInTheDocument();
     expect(api.identity.identify).toHaveBeenCalledWith('PAT-000123', '1995-04-02');
+  });
+
+  // ── Seeing your own bookings ────────────────────────────────────────────────
+
+  it('shows a returning patient their upcoming appointments once identified', async () => {
+    api.appointment.mine.mockResolvedValue([UPCOMING]);
+    render(<BookingFlow />);
+
+    type('Patient number', 'PAT-000123');
+    type('Date of birth', '1995-04-02');
+    click('Continue');
+
+    const list = await screen.findByTestId('upcoming-appointments');
+    // 03:30Z is 09:00 in Colombo.
+    expect(list).toHaveTextContent('09:00');
+    expect(list).toHaveTextContent('Nimal Perera — Neurology');
+  });
+
+  it('says so when an identified patient has nothing booked', async () => {
+    render(<BookingFlow />);
+
+    type('Patient number', 'PAT-000123');
+    type('Date of birth', '1995-04-02');
+    click('Continue');
+
+    expect(await screen.findByTestId('upcoming-appointments')).toHaveTextContent(
+      'You have no upcoming appointments.',
+    );
+  });
+
+  it('refreshes the list after booking, so the new appointment is in it', async () => {
+    render(<BookingFlow />);
+    await identifyAndPickASlot();
+    api.appointment.mine.mockResolvedValue([UPCOMING]);
+
+    click('Confirm booking');
+
+    await screen.findByTestId('booking-confirmation');
+    await waitFor(() => expect(api.appointment.mine).toHaveBeenCalledTimes(2));
+    expect(await screen.findByTestId('upcoming-appointments')).toHaveTextContent('Nimal Perera');
+  });
+
+  it('still lets a patient book when their bookings cannot be read', async () => {
+    // A convenience, not a gate: a failure here shows nothing rather than blocking the flow.
+    api.appointment.mine.mockImplementation(() => rejectWith(500));
+    render(<BookingFlow />);
+
+    type('Patient number', 'PAT-000123');
+    type('Date of birth', '1995-04-02');
+    click('Continue');
+
+    expect(await screen.findAllByTestId('slot-option')).not.toHaveLength(0);
+    expect(screen.queryByTestId('upcoming-appointments')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('says the same thing for a wrong number and a wrong date of birth', async () => {

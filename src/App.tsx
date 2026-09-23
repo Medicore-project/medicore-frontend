@@ -17,6 +17,7 @@ import PatientPrescriptionsPage from './pages/PatientPrescriptionsPage';
 import PatientAllergiesPage from './pages/PatientAllergiesPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import DoctorLeavePage from './pages/DoctorLeavePage';
+import ClinicAppointmentsPage from './pages/ClinicAppointmentsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -81,6 +82,9 @@ export const App: React.FC = () => {
       <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/patients/register" element={<PatientRegistrationPage />} />
+          {/* The clinic-wide "who is booked" list. The API behind it also serves Doctor and
+              Nurse (ScheduleReader), who see bookings on the weekly grid instead. */}
+          <Route path="/appointments/booked" element={<ClinicAppointmentsPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[...SCHEDULE_READER_ROLES]} />}>
