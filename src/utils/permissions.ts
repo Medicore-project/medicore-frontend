@@ -75,6 +75,13 @@ export const CLINIC_ROLES = ['Admin', 'Receptionist', 'Doctor', 'Nurse'] as cons
 export const BOOKING_ROLES = ['Admin', 'Receptionist', 'Patient'] as const;
 
 /**
+ * Who reaches the Booked Appointments list — the front desk, and doctors, who need to see who is
+ * booked with them. The API behind it (`GET /api/appointments`, ScheduleReader) also admits Nurse;
+ * the page is not offered to them, who read bookings on the weekly grid instead.
+ */
+export const BOOKED_LIST_ROLES = ['Admin', 'Receptionist', 'Doctor'] as const;
+
+/**
  * Where a signed-in user belongs. Staff land on the dashboard; a Patient reaches booking and
  * nothing else, so sending them to the staff-only dashboard would only bounce them back to `/`.
  */

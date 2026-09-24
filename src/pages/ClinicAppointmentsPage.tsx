@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { bookedApi, colomboTimeLabel, doctorApi, toDateOnly } from '../api/appointments';
+import { bookedApi, doctorApi, toDateOnly } from '../api/appointments';
 import type { AppointmentSummary, DoctorResponse } from '../api/appointments';
+import BookedStats from '../components/appointments/BookedStats';
+import BookedTable from '../components/appointments/BookedTable';
+import {
+  CalendarIcon,
+  ChevronDownIcon,
+  LayersIcon,
+  PinIcon,
+  SearchIcon,
+  UserIcon,
+} from '../components/appointments/BookedIcons';
+import { useAuth } from '../contexts/AuthContext';
 import { extractErrorMessage } from '../utils/apiError';
 
 /** Status values as the appointment service stores them. Mirrors AppointmentStatus. */
-const STATUSES = ['Booked', 'Completed', 'Cancelled'] as const;
+const STATUSES = ['Booked', 'Completed', 'Cancelled', 'NoShow'] as const;
 
 interface Filters {
   doctorId: string;
@@ -14,51 +24,53 @@ interface Filters {
   status: string;
 }
 
-function defaultFilters(): Filters {
+/**
+ * The coming week, for the whole clinic — or, for a doctor, for themselves. A doctor opening this
+ * page wants "who is booked with me"; they can still switch to All doctors, as the weekly grid lets
+ * them browse any doctor.
+ */
+function defaultFilters(ownDoctorId: string): Filters {
   const today = new Date();
   const weekOut = new Date(today);
   weekOut.setDate(today.getDate() + 6);
-  return { doctorId: '', from: toDateOnly(today), to: toDateOnly(weekOut), status: '' };
-}
-
-function dayLabel(slotDate: string): string {
-  const [year, month, day] = slotDate.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-}
-
-function statusBadgeClass(status: string): string {
-  if (status === 'Booked') return 'badge badge-success';
-  return 'badge badge-inactive';
+  return { doctorId: ownDoctorId, from: toDateOnly(today), to: toDateOnly(weekOut), status: '' };
 }
 
 /**
- * Every booking in the clinic over a date range — who is coming, to see whom, and when.
+ * Every booking over a date range — who is coming, to see whom, and when.
  *
- * The front desk's answer to "who booked?". The weekly grid on /appointments shows one doctor at a
- * time; this is the whole clinic in one list, filterable by doctor. Status is filtered here rather
- * than by the service, which returns every status so both screens can decide for themselves.
+ * The weekly grid on /appointments shows one doctor at a time; this is the clinic in one list.
+ * Doctor and dates are sent to the service; status is applied here, because the service returns
+ * every status and the counts across the top describe all of them.
+ *
+ * Filters apply on "Apply Filters", not on every change: the fields are a draft, `applied` is what
+ * the table shows, so half-typed dates never fire a request.
  */
 export const ClinicAppointmentsPage: React.FC = () => {
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const { user } = useAuth();
+  const ownDoctorId = user?.role === 'Doctor' && user.staffId ? user.staffId : '';
+
+  const [draft, setDraft] = useState<Filters>(() => defaultFilters(ownDoctorId));
+  const [applied, setApplied] = useState<Filters>(() => defaultFilters(ownDoctorId));
   const [doctors, setDoctors] = useState<DoctorResponse[]>([]);
   const [appointments, setAppointments] = useState<AppointmentSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // First load only. Every later load comes from a filter change, in its handler.
+  // First load only. Every later load comes from Apply Filters, in its handler.
   useEffect(() => {
     let cancelled = false;
-    const initial = defaultFilters();
+    const initial = defaultFilters(ownDoctorId);
 
     (async () => {
       try {
         const [doctorList, booked] = await Promise.all([
           doctorApi.list(),
-          bookedApi.list({ from: initial.from, to: initial.to }),
+          bookedApi.list({
+            doctorId: initial.doctorId || undefined,
+            from: initial.from,
+            to: initial.to,
+          }),
         ]);
         if (cancelled) return;
         setDoctors(doctorList);
@@ -73,22 +85,34 @@ export const ClinicAppointmentsPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [ownDoctorId]);
 
-  const load = async (next: Filters) => {
-    if (next.from && next.to && next.from > next.to) {
+  const applyFilters = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    if (!draft.from || !draft.to) {
+      setError('Choose both a start and an end date.');
+      return;
+    }
+    if (draft.from > draft.to) {
       setError('The start date must not be after the end date.');
       return;
     }
 
-    setIsLoading(true);
+    // Status alone is a local filter; no need to ask the service again.
+    const serverFiltersChanged =
+      draft.doctorId !== applied.doctorId || draft.from !== applied.from || draft.to !== applied.to;
+    setApplied(draft);
     setError(null);
+    if (!serverFiltersChanged) return;
+
+    setIsLoading(true);
     try {
       setAppointments(
         await bookedApi.list({
-          doctorId: next.doctorId || undefined,
-          from: next.from,
-          to: next.to,
+          doctorId: draft.doctorId || undefined,
+          from: draft.from,
+          to: draft.to,
         }),
       );
     } catch (err) {
@@ -99,27 +123,35 @@ export const ClinicAppointmentsPage: React.FC = () => {
     }
   };
 
-  /** Doctor and dates are server-side filters; status is applied to what is already loaded. */
-  const change = (field: keyof Filters, value: string) => {
-    const next = { ...filters, [field]: value };
-    setFilters(next);
-    if (field !== 'status') void load(next);
-  };
+  const change = (field: keyof Filters, value: string) =>
+    setDraft((current) => ({ ...current, [field]: value }));
 
-  const visible = filters.status
-    ? appointments.filter((a) => a.status === filters.status)
+  const visible = applied.status
+    ? appointments.filter((a) => a.status === applied.status)
     : appointments;
 
+  // A doctor whose own profile is not (yet) in the bookable cache still gets an option for
+  // themselves, rather than a select showing a value it has no option for.
+  const ownDoctorMissing = ownDoctorId !== '' && !doctors.some((d) => d.doctorId === ownDoctorId);
+
   return (
-    <div className="management-page clinic-appointments-page">
-      <div className="page-header">
-        <div>
+    <div className="booked-page">
+      <section className="booked-hero">
+        <span className="booked-tile">
+          <CalendarIcon />
+        </span>
+        <div className="booked-hero-text">
           <h1>Booked Appointments</h1>
-          <p className="page-subtitle">
-            Who is booked with which doctor, across the clinic. Times shown in Asia/Colombo.
-          </p>
+          <p>View and manage all booked appointments across the clinic.</p>
         </div>
-      </div>
+        <div className="booked-timezone">
+          <PinIcon className="booked-timezone-icon" />
+          <span>
+            <span className="booked-timezone-label">Times shown in</span>
+            <strong>Asia/Colombo</strong>
+          </span>
+        </div>
+      </section>
 
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -127,116 +159,80 @@ export const ClinicAppointmentsPage: React.FC = () => {
         </div>
       )}
 
-      <div className="schedule-toolbar card clinic-appointments-filters">
-        <div className="form-group">
-          <label htmlFor="booked-doctor">Doctor</label>
-          <select
-            id="booked-doctor"
-            className="filter-select"
-            value={filters.doctorId}
-            onChange={(e) => change('doctorId', e.target.value)}
-          >
-            <option value="">All doctors</option>
-            {doctors.map((d) => (
-              <option key={d.doctorId} value={d.doctorId}>
-                {d.fullName}
-                {d.specialization ? ` — ${d.specialization}` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="booked-from">From</label>
-          <input
-            id="booked-from"
-            type="date"
-            className="filter-select"
-            value={filters.from}
-            onChange={(e) => change('from', e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="booked-to">To</label>
-          <input
-            id="booked-to"
-            type="date"
-            className="filter-select"
-            value={filters.to}
-            onChange={(e) => change('to', e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="booked-status">Status</label>
-          <select
-            id="booked-status"
-            className="filter-select"
-            value={filters.status}
-            onChange={(e) => change('status', e.target.value)}
-          >
-            <option value="">Any status</option>
-            {STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <BookedStats appointments={appointments} />
 
-      <div className="card">
-        {isLoading ? (
-          <p className="schedule-empty">Loading…</p>
-        ) : visible.length === 0 ? (
-          <div className="schedule-empty schedule-empty--notice">
-            <p className="schedule-empty-title">No appointments in this range</p>
-            <p className="schedule-empty-hint">Try a wider date range or another doctor.</p>
+      <form className="booked-filters" onSubmit={(e) => void applyFilters(e)}>
+        <div className="booked-field booked-field--doctor">
+          <label htmlFor="booked-doctor">Doctor</label>
+          <div className="booked-input">
+            <UserIcon className="booked-input-icon" />
+            <select
+              id="booked-doctor"
+              value={draft.doctorId}
+              onChange={(e) => change('doctorId', e.target.value)}
+            >
+              <option value="">All doctors</option>
+              {ownDoctorMissing && <option value={ownDoctorId}>You</option>}
+              {doctors.map((d) => (
+                <option key={d.doctorId} value={d.doctorId}>
+                  {d.fullName}
+                  {d.specialization ? ` — ${d.specialization}` : ''}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="booked-input-chevron" />
           </div>
-        ) : (
-          <div className="table-responsive">
-            <table className="data-table" data-testid="clinic-appointments">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Patient</th>
-                  <th>Doctor</th>
-                  <th>Service</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((a) => (
-                  <tr key={a.appointmentId}>
-                    <td>{dayLabel(a.slotDate)}</td>
-                    <td>
-                      {colomboTimeLabel(a.startUtc)}
-                      <span className="table-secondary-text">{a.durationMinutes} min</span>
-                    </td>
-                    <td>
-                      <Link to={`/patients/${a.patientId}`} className="font-semibold">
-                        {a.patientName ?? 'Unnamed patient'}
-                      </Link>
-                      {a.patientNumber && (
-                        <span className="table-secondary-text">{a.patientNumber}</span>
-                      )}
-                    </td>
-                    <td>
-                      {a.doctorName ?? 'Unknown doctor'}
-                      {a.specialization && (
-                        <span className="table-secondary-text">{a.specialization}</span>
-                      )}
-                    </td>
-                    <td>{a.serviceCode}</td>
-                    <td>
-                      <span className={statusBadgeClass(a.status)}>{a.status}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        </div>
+        <div className="booked-field">
+          <label htmlFor="booked-from">From Date</label>
+          <div className="booked-input">
+            <CalendarIcon className="booked-input-icon" />
+            <input
+              id="booked-from"
+              type="date"
+              value={draft.from}
+              onChange={(e) => change('from', e.target.value)}
+            />
           </div>
-        )}
-      </div>
+        </div>
+        <div className="booked-field">
+          <label htmlFor="booked-to">To Date</label>
+          <div className="booked-input">
+            <CalendarIcon className="booked-input-icon" />
+            <input
+              id="booked-to"
+              type="date"
+              value={draft.to}
+              onChange={(e) => change('to', e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="booked-field">
+          <label htmlFor="booked-status">Status</label>
+          <div className="booked-input">
+            <LayersIcon className="booked-input-icon" />
+            <select
+              id="booked-status"
+              value={draft.status}
+              onChange={(e) => change('status', e.target.value)}
+            >
+              <option value="">Any status</option>
+              {STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status === 'NoShow' ? 'No-show' : status}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="booked-input-chevron" />
+          </div>
+        </div>
+        <button type="submit" className="booked-apply" disabled={isLoading}>
+          <SearchIcon className="booked-btn-icon" />
+          Apply Filters
+        </button>
+      </form>
+
+      <BookedTable rows={visible} isLoading={isLoading} />
     </div>
   );
 };

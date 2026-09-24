@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BOOKED_LIST_ROLES,
   BOOKING_ROLES,
   CLINIC_ROLES,
   FRONT_DESK_ROLES,
@@ -85,6 +86,7 @@ describe('the Patient role (SCRUM-34)', () => {
       SCHEDULE_READER_ROLES,
       LEAVE_READER_ROLES,
       CLINIC_ROLES,
+      BOOKED_LIST_ROLES,
     };
 
     Object.entries(otherSets).forEach(([name, roles]) => {
@@ -115,5 +117,11 @@ describe('homePathFor', () => {
 
   it('sends every clinic role to the dashboard', () => {
     CLINIC_ROLES.forEach((role) => expect(homePathFor(role)).toBe('/dashboard'));
+  });
+});
+
+describe('BOOKED_LIST_ROLES', () => {
+  it('is the front desk plus doctors, who need to see who is booked with them', () => {
+    expect([...BOOKED_LIST_ROLES].sort()).toEqual(['Admin', 'Doctor', 'Receptionist']);
   });
 });

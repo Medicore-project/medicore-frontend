@@ -24,6 +24,7 @@ import LandingPage from './pages/LandingPage';
 import PublicBookingPage from './pages/PublicBookingPage';
 import BookingFlow from './components/booking/BookingFlow';
 import {
+  BOOKED_LIST_ROLES,
   BOOKING_ROLES,
   CLINIC_ROLES,
   FRONT_DESK_ROLES,
@@ -82,8 +83,11 @@ export const App: React.FC = () => {
       <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/patients/register" element={<PatientRegistrationPage />} />
-          {/* The clinic-wide "who is booked" list. The API behind it also serves Doctor and
-              Nurse (ScheduleReader), who see bookings on the weekly grid instead. */}
+        </Route>
+      </Route>
+      {/* "Who is booked" — the front desk, and doctors, who open it on their own bookings. */}
+      <Route element={<ProtectedRoute allowedRoles={[...BOOKED_LIST_ROLES]} />}>
+        <Route element={<AppLayout />}>
           <Route path="/appointments/booked" element={<ClinicAppointmentsPage />} />
         </Route>
       </Route>
