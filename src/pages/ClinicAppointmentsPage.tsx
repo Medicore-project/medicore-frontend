@@ -10,7 +10,7 @@ import {
   PinIcon,
   SearchIcon,
   UserIcon,
-} from '../components/appointments/BookedIcons';
+} from '../components/icons/LineIcons';
 import { useAuth } from '../contexts/AuthContext';
 import { extractErrorMessage } from '../utils/apiError';
 

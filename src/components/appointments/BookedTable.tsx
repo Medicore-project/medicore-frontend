@@ -10,7 +10,7 @@ import {
   DownloadIcon,
   ListIcon,
   SortIcon,
-} from './BookedIcons';
+} from '../icons/LineIcons';
 import { dayLabel, toCsv } from '../../utils/bookedAppointments';
 
 type SortKey = 'date' | 'time' | 'patient' | 'doctor' | 'service' | 'status';

@@ -16,6 +16,7 @@ import type {
 } from '../../api/booking';
 import { clearBookingToken } from '../../api/bookingToken';
 import { extractErrorMessage } from '../../utils/apiError';
+import { fullDateLabel } from '../../utils/bookingLabels';
 import {
   EMPTY_PATIENT_FORM,
   mapValidationErrors,
@@ -23,8 +24,11 @@ import {
   validatePatientForm,
 } from '../../utils/patientForm';
 import type { PatientFieldErrors, PatientForm } from '../../utils/patientForm';
+import { CheckIcon } from '../icons/LineIcons';
 import BillingNotice from './BillingNotice';
-import ConfirmStep from './ConfirmStep';
+import BookingForCard from './BookingForCard';
+import BookingStepper from './BookingStepper';
+import BookingSummary from './BookingSummary';
 import IdentifyStep from './IdentifyStep';
 import RegisterStep from './RegisterStep';
 import SlotPicker from './SlotPicker';
@@ -37,7 +41,6 @@ type BookingStep =
   | { kind: 'identify' }
   | { kind: 'register' }
   | { kind: 'choose' }
-  | { kind: 'confirm'; slot: PublicSlot; doctor: PublicDoctor }
   | { kind: 'booked'; appointment: AppointmentResponse; doctor: PublicDoctor };
 
 interface BookingIdentity {
@@ -49,13 +52,16 @@ interface BookingIdentity {
 }
 
 /**
- * The public booking flow: identify or register, choose a doctor and a time, confirm.
+ * The public booking flow: identify or register, choose a doctor, a date and a time, confirm.
  *
  * The identity, the demographics form and the booking error live **outside** the step, on purpose.
  * Registering a patient and booking a slot are two calls to two services that cannot share a
  * transaction, so a slot can be taken between them. When that happens the patient record already
  * exists, and the recovery is the whole point: the patient number stays on screen, the form is not
  * shown again, and only slot selection is retried. Nobody re-registers and nobody retypes anything.
+ *
+ * There is no separate confirm step. The chosen time is state beside the step, reviewed in the
+ * summary panel next to the choices, and booked from there.
  */
 const BookingFlow: React.FC = () => {
   const [step, setStep] = useState<BookingStep>({ kind: 'identify' });
@@ -67,12 +73,14 @@ const BookingFlow: React.FC = () => {
   const [stepError, setStepError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Doctor and slot selection.
+  // Doctor, date and time selection.
   const [specializations, setSpecializations] = useState<string[]>([]);
   const [specialization, setSpecialization] = useState('');
   const [doctors, setDoctors] = useState<PublicDoctor[]>([]);
   const [doctorId, setDoctorId] = useState('');
   const [slots, setSlots] = useState<PublicSlot[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<PublicSlot | null>(null);
   const [isLoadingDoctors, setIsLoadingDoctors] = useState(false);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
@@ -80,6 +88,8 @@ const BookingFlow: React.FC = () => {
   // fails — seeing past bookings is a convenience and must never stand between a patient and a
   // new one, so a failure here shows nothing rather than an error.
   const [upcoming, setUpcoming] = useState<PatientAppointment[] | null>(null);
+
+  const selectedDoctor = doctors.find((candidate) => candidate.doctorId === doctorId) ?? null;
 
   // ── Data loading ────────────────────────────────────────────────────────────
 
@@ -102,6 +112,33 @@ const BookingFlow: React.FC = () => {
     };
   }, []);
 
+  /**
+   * Loads a doctor's free times and lands on a date that has some — the one already chosen if it
+   * still does, otherwise the first. Any chosen time is dropped: after a reload it may be gone.
+   */
+  const loadSlots = useCallback(async (wantedDoctorId: string, keepDate: string | null = null) => {
+    setSelectedSlot(null);
+    if (!wantedDoctorId) {
+      setSlots([]);
+      setSelectedDate(null);
+      return;
+    }
+
+    setIsLoadingSlots(true);
+    try {
+      const result = await publicBookingApi.slots(wantedDoctorId);
+      setSlots(result);
+      const stillFree = keepDate !== null && result.some((slot) => slot.slotDate === keepDate);
+      setSelectedDate(stillFree ? keepDate : (result[0]?.slotDate ?? null));
+    } catch (err) {
+      setStepError(extractErrorMessage(err, 'Could not load available times.'));
+      setSlots([]);
+      setSelectedDate(null);
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  }, []);
+
   const loadDoctors = useCallback(async (wanted: string) => {
     setIsLoadingDoctors(true);
     try {
@@ -109,6 +146,8 @@ const BookingFlow: React.FC = () => {
       setDoctors(result);
       setDoctorId(result.length === 1 ? result[0].doctorId : '');
       setSlots([]);
+      setSelectedDate(null);
+      setSelectedSlot(null);
       return result;
     } catch (err) {
       setStepError(extractErrorMessage(err, 'Could not load doctors. Please try again.'));
@@ -116,23 +155,6 @@ const BookingFlow: React.FC = () => {
       return [];
     } finally {
       setIsLoadingDoctors(false);
-    }
-  }, []);
-
-  const loadSlots = useCallback(async (wantedDoctorId: string) => {
-    if (!wantedDoctorId) {
-      setSlots([]);
-      return;
-    }
-
-    setIsLoadingSlots(true);
-    try {
-      setSlots(await publicBookingApi.slots(wantedDoctorId));
-    } catch (err) {
-      setStepError(extractErrorMessage(err, 'Could not load available times.'));
-      setSlots([]);
-    } finally {
-      setIsLoadingSlots(false);
     }
   }, []);
 
@@ -222,6 +244,16 @@ const BookingFlow: React.FC = () => {
     }
   };
 
+  /** Starts over as someone else. The token goes with the identity — it named that patient. */
+  const changePatient = () => {
+    clearBookingToken();
+    setIdentity(null);
+    setUpcoming(null);
+    setSelectedSlot(null);
+    setStepError(null);
+    setStep({ kind: 'identify' });
+  };
+
   // ── Choosing ────────────────────────────────────────────────────────────────
 
   const handleSpecializationChange = async (value: string) => {
@@ -237,31 +269,27 @@ const BookingFlow: React.FC = () => {
     await loadSlots(value);
   };
 
-  const handlePickSlot = (slot: PublicSlot) => {
-    const doctor = doctors.find((candidate) => candidate.doctorId === doctorId);
-    if (!doctor) return;
+  const handleSelectDate = (date: string) => {
+    setSelectedDate(date);
+    setSelectedSlot(null);
+  };
 
+  const handlePickSlot = (slot: PublicSlot) => {
     setStepError(null);
-    setStep({ kind: 'confirm', slot, doctor });
+    setSelectedSlot(slot);
   };
 
   // ── Booking, and recovering from a lost slot ────────────────────────────────
 
-  /** Back to slot selection with a message, keeping the identity and the token. */
-  const returnToChoosing = async (message: string) => {
-    setStepError(message);
-    setStep({ kind: 'choose' });
-    await loadSlots(doctorId);
-  };
-
   const handleConfirm = async () => {
-    if (step.kind !== 'confirm') return;
+    if (!selectedSlot || !selectedDoctor) return;
 
     setIsSubmitting(true);
     setStepError(null);
     try {
-      const appointment = await appointmentApi.book(step.slot.slotId, DEFAULT_SERVICE_CODE);
-      setStep({ kind: 'booked', appointment, doctor: step.doctor });
+      const appointment = await appointmentApi.book(selectedSlot.slotId, DEFAULT_SERVICE_CODE);
+      setStep({ kind: 'booked', appointment, doctor: selectedDoctor });
+      setSelectedSlot(null);
       await loadUpcoming();
     } catch (err) {
       if (isBookingSessionExpiredError(err)) {
@@ -270,14 +298,17 @@ const BookingFlow: React.FC = () => {
         clearBookingToken();
         setIdentity(null);
         setUpcoming(null);
+        setSelectedSlot(null);
         setStep({ kind: 'identify' });
         setStepError('Your booking session expired. Please identify yourself again.');
       } else {
         // 409 (slot gone, or a clash with their own diary) and 400 (the list was stale) both mean
-        // "pick again". The service worded the reason; show it rather than guessing.
-        await returnToChoosing(
+        // "pick again". The service worded the reason; show it rather than guessing. The times are
+        // refetched, staying on the same day if it still has any.
+        setStepError(
           extractErrorMessage(err, 'That time is no longer available. Please choose another.'),
         );
+        await loadSlots(doctorId, selectedSlot.slotDate);
       }
     } finally {
       setIsSubmitting(false);
@@ -287,118 +318,113 @@ const BookingFlow: React.FC = () => {
   const bookAnother = async () => {
     setStepError(null);
     setStep({ kind: 'choose' });
-    await loadSlots(doctorId);
+    await loadSlots(doctorId, selectedDate);
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  const currentStep =
+    step.kind === 'booked' ? 4 : selectedSlot ? 3 : step.kind === 'choose' && doctorId ? 2 : 1;
+
   return (
-    <div className="booking-flow">
-      {identity && (
-        <section
-          className="registration-result registration-success"
-          role="status"
-          data-testid="patient-number"
-        >
-          <span className="registration-result-label">
-            {identity.isNewlyRegistered ? 'You are registered' : 'Booking as'}
-          </span>
-          <strong className="patient-number">{identity.patientNumber}</strong>
-          <span>{identity.fullName}</span>
-          {identity.isNewlyRegistered && (
-            <span className="field-help">
-              Keep this number — use it with your date of birth next time you book.
-            </span>
+    <div className="bk-flow">
+      <BookingStepper current={currentStep} />
+
+      <div className="bk-layout">
+        <div className="bk-main">
+          {identity && (
+            <BookingForCard
+              patientNumber={identity.patientNumber}
+              fullName={identity.fullName}
+              isNewlyRegistered={identity.isNewlyRegistered}
+              onChangePatient={changePatient}
+              disabled={isSubmitting}
+            />
           )}
-        </section>
-      )}
 
-      {step.kind === 'identify' && (
-        <IdentifyStep
-          onIdentify={handleIdentify}
-          onNewPatient={() => {
-            setStepError(null);
-            setStep({ kind: 'register' });
-          }}
-          error={stepError}
-          isSubmitting={isSubmitting}
-        />
-      )}
+          {step.kind === 'identify' && (
+            <IdentifyStep
+              onIdentify={handleIdentify}
+              onNewPatient={() => {
+                setStepError(null);
+                setStep({ kind: 'register' });
+              }}
+              error={stepError}
+              isSubmitting={isSubmitting}
+            />
+          )}
 
-      {step.kind === 'register' && (
-        <RegisterStep
-          form={form}
-          fieldErrors={fieldErrors}
-          error={stepError}
-          isSubmitting={isSubmitting}
-          onChange={handleFieldChange}
-          onSubmit={handleRegister}
-          onBackToIdentify={() => {
-            setStepError(null);
-            setStep({ kind: 'identify' });
-          }}
-        />
-      )}
+          {step.kind === 'register' && (
+            <RegisterStep
+              form={form}
+              fieldErrors={fieldErrors}
+              error={stepError}
+              isSubmitting={isSubmitting}
+              onChange={handleFieldChange}
+              onSubmit={handleRegister}
+              onBackToIdentify={() => {
+                setStepError(null);
+                setStep({ kind: 'identify' });
+              }}
+            />
+          )}
 
-      {identity && upcoming && (step.kind === 'choose' || step.kind === 'booked') && (
-        <UpcomingAppointments appointments={upcoming} />
-      )}
+          {step.kind === 'choose' && (
+            <SlotPicker
+              specializations={specializations}
+              specialization={specialization}
+              doctors={doctors}
+              doctorId={doctorId}
+              slots={slots}
+              selectedDate={selectedDate}
+              selectedSlotId={selectedSlot?.slotId ?? null}
+              isLoadingDoctors={isLoadingDoctors}
+              isLoadingSlots={isLoadingSlots}
+              error={stepError}
+              onSpecializationChange={handleSpecializationChange}
+              onDoctorChange={handleDoctorChange}
+              onSelectDate={handleSelectDate}
+              onPickSlot={handlePickSlot}
+            />
+          )}
 
-      {step.kind === 'choose' && (
-        <SlotPicker
-          specializations={specializations}
-          specialization={specialization}
-          doctors={doctors}
-          doctorId={doctorId}
-          slots={slots}
-          isLoadingDoctors={isLoadingDoctors}
-          isLoadingSlots={isLoadingSlots}
-          error={stepError}
-          onSpecializationChange={handleSpecializationChange}
-          onDoctorChange={handleDoctorChange}
-          onPickSlot={handlePickSlot}
-        />
-      )}
+          {step.kind === 'booked' && (
+            <section className="bk-card bk-done" role="status" data-testid="booking-confirmation">
+              <span className="bk-done-icon">
+                <CheckIcon />
+              </span>
+              <h2>Your appointment is confirmed</h2>
+              <p className="bk-done-detail">
+                <strong>{step.doctor.fullName}</strong> ·{' '}
+                {fullDateLabel(step.appointment.slotDate)} at{' '}
+                {colomboTimeLabel(step.appointment.startUtc)}
+              </p>
+              <p className="field-help">Please arrive ten minutes early and bring your patient number.</p>
+              <BillingNotice serviceCode={step.appointment.serviceCode} />
+              <button type="button" className="btn btn-outline" onClick={bookAnother}>
+                Book another appointment
+              </button>
+            </section>
+          )}
+        </div>
 
-      {step.kind === 'confirm' && (
-        <ConfirmStep
-          doctor={step.doctor}
-          slot={step.slot}
-          serviceCode={DEFAULT_SERVICE_CODE}
-          isSubmitting={isSubmitting}
-          error={stepError}
-          onConfirm={handleConfirm}
-          onBack={() => {
-            setStepError(null);
-            setStep({ kind: 'choose' });
-          }}
-        />
-      )}
-
-      {step.kind === 'booked' && (
-        <section className="card booking-step" role="status" data-testid="booking-confirmation">
-          <h2>Your appointment is confirmed</h2>
-          <dl className="booking-summary">
-            <div className="detail-row">
-              <dt className="detail-label">Doctor</dt>
-              <dd className="detail-value">{step.doctor.fullName}</dd>
-            </div>
-            <div className="detail-row">
-              <dt className="detail-label">When</dt>
-              <dd className="detail-value">
-                {step.appointment.slotDate} at {colomboTimeLabel(step.appointment.startUtc)}
-              </dd>
-            </div>
-          </dl>
-          <p className="field-help">Please arrive ten minutes early and bring your patient number.</p>
-          <BillingNotice serviceCode={step.appointment.serviceCode} />
-          <div className="booking-step-actions">
-            <button type="button" className="btn btn-outline" onClick={bookAnother}>
-              Book another appointment
-            </button>
-          </div>
-        </section>
-      )}
+        <aside className="bk-side">
+          {step.kind !== 'booked' && (
+            <BookingSummary
+              patient={identity}
+              specialization={specialization}
+              doctor={step.kind === 'choose' ? selectedDoctor : null}
+              slot={selectedSlot}
+              serviceCode={DEFAULT_SERVICE_CODE}
+              isSubmitting={isSubmitting}
+              onConfirm={() => void handleConfirm()}
+            />
+          )}
+          {identity && upcoming && (step.kind === 'choose' || step.kind === 'booked') && (
+            <UpcomingAppointments appointments={upcoming} />
+          )}
+        </aside>
+      </div>
     </div>
   );
 };

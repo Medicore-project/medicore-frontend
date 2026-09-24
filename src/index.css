@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
 @import url('./landing.css');
 @import url('./booked-appointments.css');
+@import url('./booking.css');
 
 /* ==========================================================================
    MEDICORE DESIGN SYSTEM — SMART HIS INSPIRATION
@@ -3903,43 +3904,6 @@ details[open] .rx-history-summary::before {
 
 /* ── Public booking (SCRUM-34) ─────────────────────────────────────────────── */
 
-/* Outside the authenticated shell: this page has no sidebar, so it centres itself. */
-.public-booking-page {
-  min-height: 100vh;
-  background: var(--bg-subtle);
-  padding: 32px 16px 64px;
-}
-
-.public-booking-header,
-.public-booking-body {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.public-booking-header {
-  margin-bottom: 24px;
-}
-
-.public-booking-brand {
-  display: inline-block;
-  margin-bottom: 16px;
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--primary);
-  text-decoration: none;
-}
-
-.public-booking-header h1 {
-  margin: 0 0 6px;
-  font-size: 1.75rem;
-}
-
-.booking-flow {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 .booking-step {
   display: flex;
   flex-direction: column;
@@ -3981,30 +3945,6 @@ details[open] .rx-history-summary::before {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-}
-
-.booking-day + .booking-day {
-  margin-top: 8px;
-}
-
-.booking-day-label {
-  margin: 0 0 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.booking-slot-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.booking-slot {
-  min-width: 76px;
-}
-
-.booking-summary {
-  margin: 0;
 }
 
 .booking-upcoming h2 {

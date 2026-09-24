@@ -1,8 +1,9 @@
 import React from 'react';
 
 /**
- * Line icons for the Booked Appointments page. Inline SVG, like the login page's, because the app
- * has no icon library and one page's worth of glyphs is not worth adding one for.
+ * Line icons shared by the Booked Appointments and booking pages. Inline SVG, like the login page's,
+ * because the app has no icon library and a couple of pages' worth of glyphs is not worth adding one
+ * for.
  *
  * Every icon is decorative (`aria-hidden`): each sits beside text that already says the same thing.
  */
@@ -115,5 +116,67 @@ export const DotsIcon: React.FC<IconProps> = ({ className }) => (
     <circle cx="12" cy="5.5" r="1.7" />
     <circle cx="12" cy="12" r="1.7" />
     <circle cx="12" cy="18.5" r="1.7" />
+  </svg>
+);
+
+export const StethoscopeIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M6 3.5v5a4 4 0 0 0 8 0v-5" />
+    <path d="M10 12.5v2.5a4.5 4.5 0 0 0 9 0v-2" />
+    <circle cx="19" cy="11" r="2" />
+  </Svg>
+);
+
+export const BrainIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M12 5.5a3 3 0 0 0-5.6-1.3A3 3 0 0 0 4 8.5a3.2 3.2 0 0 0 .6 5.6A3.3 3.3 0 0 0 8.5 19a3 3 0 0 0 3.5 1V5.5Z" />
+    <path d="M12 5.5a3 3 0 0 1 5.6-1.3A3 3 0 0 1 20 8.5a3.2 3.2 0 0 1-.6 5.6 3.3 3.3 0 0 1-3.9 4.9A3 3 0 0 1 12 20" />
+  </Svg>
+);
+
+export const SwapIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5" />
+  </Svg>
+);
+
+export const DocumentIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <rect x="5" y="3.5" width="14" height="17" rx="2.5" />
+    <path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" />
+  </Svg>
+);
+
+export const ArrowRightIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M4.5 12h15M14 6.5l5.5 5.5-5.5 5.5" />
+  </Svg>
+);
+
+export const ChevronRightIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="m10 7 5 5-5 5" />
+  </Svg>
+);
+
+export const ChevronLeftIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="m14 7-5 5 5 5" />
+  </Svg>
+);
+
+/** A filled check in a circle — the badge on a selected time. */
+export const CheckBadgeIcon: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <circle cx="12" cy="12" r="10" fill="#ffffff" />
+    <path d="m7.5 12.3 3 3 6-6.3" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/** The MediCore mark: a heart with a cross. */
+export const HeartPlusIcon: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 21s-8.5-5.1-8.5-11.2A4.8 4.8 0 0 1 12 6.7a4.8 4.8 0 0 1 8.5 3.1C20.5 15.9 12 21 12 21Z" fill="currentColor" />
+    <path d="M12 9.5v6M9 12.5h6" stroke="#ffffff" strokeWidth={2} strokeLinecap="round" />
   </svg>
 );

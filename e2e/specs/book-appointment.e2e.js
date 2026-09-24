@@ -50,17 +50,15 @@ describe('SCRUM-34 public appointment booking', function () {
 
     await page.chooseDoctor(doctors[0].value);
 
-    const timesBefore = await (async () => {
-      await page.waitForTestId('booking-slot-picker');
-      return page.offeredTimes();
-    })();
-    assert.ok(timesBefore.length > 0, 'This doctor has no free times; give them a future schedule.');
+    await page.waitForTestId('booking-slot-picker');
+    const offeredBefore = await page.waitForAllTestIds('slot-option');
+    assert.ok(offeredBefore.length > 0, 'This doctor has no free times; give them a future schedule.');
 
-    const chosenTime = await page.pickFirstTime();
+    const chosen = await page.pickFirstTime();
 
-    // The confirm screen says what is about to happen, and says nothing has been charged.
-    const confirmText = await page.textOfTestId('booking-confirm');
-    assert.ok(confirmText.includes(chosenTime), 'The confirm screen should show the chosen time.');
+    // The summary says what is about to happen, and says nothing has been charged.
+    const summaryText = await page.textOfTestId('booking-confirm');
+    assert.ok(summaryText.includes(chosen.time), 'The summary should show the chosen time.');
     assert.match(await page.textOfTestId('billing-notice'), /Sprint\s*4/);
 
     await page.confirm();
@@ -75,11 +73,13 @@ describe('SCRUM-34 public appointment booking', function () {
     await page.identifyAs(patient);
     await page.chooseDoctor(doctors[0].value);
     await page.waitForTestId('booking-slot-picker');
-    const timesAfter = await page.offeredTimes();
+    const offeredAfter = await page.offeredSlotIds();
 
+    // By id: the page lands on the same day if it still has free times, and a later day if not —
+    // either way the booked slot must not be among those offered.
     assert.ok(
-      !timesAfter.includes(chosenTime) || timesAfter.length < timesBefore.length,
-      `The booked time ${chosenTime} is still being offered.`,
+      !offeredAfter.includes(chosen.slotId),
+      `The booked slot ${chosen.slotId} (${chosen.time}) is still being offered.`,
     );
   });
 

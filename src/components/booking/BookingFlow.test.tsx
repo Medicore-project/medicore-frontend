@@ -115,7 +115,7 @@ function fillRegistration() {
   type('District *', 'Colombo');
 }
 
-/** Identifies, then picks the first offered time, leaving the flow on the confirm screen. */
+/** Identifies, then picks the first offered time, leaving it chosen in the summary. */
 async function identifyAndPickASlot() {
   type('Patient number', 'PAT-000123');
   type('Date of birth', '1995-04-02');
@@ -147,7 +147,7 @@ describe('BookingFlow (SCRUM-34)', () => {
     click('Continue');
 
     expect(await screen.findByTestId('patient-number')).toHaveTextContent('PAT-000123');
-    expect(await screen.findByLabelText('Doctor')).toBeInTheDocument();
+    expect(await screen.findByLabelText(/Select Doctor/)).toBeInTheDocument();
     expect(api.identity.identify).toHaveBeenCalledWith('PAT-000123', '1995-04-02');
   });
 
@@ -184,7 +184,7 @@ describe('BookingFlow (SCRUM-34)', () => {
     await identifyAndPickASlot();
     api.appointment.mine.mockResolvedValue([UPCOMING]);
 
-    click('Confirm booking');
+    click('Confirm Appointment');
 
     await screen.findByTestId('booking-confirmation');
     await waitFor(() => expect(api.appointment.mine).toHaveBeenCalledTimes(2));
@@ -203,6 +203,85 @@ describe('BookingFlow (SCRUM-34)', () => {
     expect(await screen.findAllByTestId('slot-option')).not.toHaveLength(0);
     expect(screen.queryByTestId('upcoming-appointments')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  // ── The redesigned picker (date strip, time grid, summary) ─────────────────
+
+  it('lands on the first date with free times and greys out days with none', async () => {
+    render(<BookingFlow />);
+    type('Patient number', 'PAT-000123');
+    type('Date of birth', '1995-04-02');
+    click('Continue');
+
+    await screen.findAllByTestId('slot-option');
+    const chips = screen.getAllByTestId('date-option');
+    const selected = chips.filter((chip) => chip.getAttribute('aria-pressed') === 'true');
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toBeEnabled();
+    // At least two weeks are drawn, and the days with nothing free cannot be picked.
+    expect(chips.length).toBeGreaterThanOrEqual(14);
+    expect(chips.filter((chip) => chip.hasAttribute('disabled')).length).toBeGreaterThan(0);
+  });
+
+  it('shows only the times of the chosen day, and switches when another day is picked', async () => {
+    const dayAfter = new Date();
+    dayAfter.setDate(dayAfter.getDate() + 2);
+    const later = dayAfter.toISOString().slice(0, 10);
+    api.publicBooking.slots.mockResolvedValue([
+      slot('slot-1', 3),
+      { ...slot('slot-9', 5), slotDate: later, startUtc: `${later}T05:30:00Z`, endUtc: `${later}T06:00:00Z` },
+    ]);
+    render(<BookingFlow />);
+    type('Patient number', 'PAT-000123');
+    type('Date of birth', '1995-04-02');
+    click('Continue');
+
+    expect(await screen.findAllByTestId('slot-option')).toHaveLength(1);
+    expect(screen.getByTestId('slot-option')).toHaveAttribute('data-slot-id', 'slot-1');
+
+    const laterChip = screen
+      .getAllByTestId('date-option')
+      .find((chip) => !chip.hasAttribute('disabled') && chip.getAttribute('aria-pressed') === 'false');
+    fireEvent.click(laterChip!);
+
+    expect(screen.getByTestId('slot-option')).toHaveAttribute('data-slot-id', 'slot-9');
+  });
+
+  it('keeps Confirm Appointment disabled until a time is chosen, then fills the summary', async () => {
+    render(<BookingFlow />);
+    type('Patient number', 'PAT-000123');
+    type('Date of birth', '1995-04-02');
+    click('Continue');
+    await screen.findAllByTestId('slot-option');
+
+    const confirm = screen.getByRole('button', { name: 'Confirm Appointment' });
+    expect(confirm).toBeDisabled();
+    expect(screen.getByTestId('booking-confirm')).toHaveTextContent('Not selected yet');
+
+    fireEvent.click(screen.getAllByTestId('slot-option')[0]);
+
+    expect(confirm).toBeEnabled();
+    expect(screen.getAllByTestId('slot-option')[0]).toHaveAttribute('aria-pressed', 'true');
+    const summary = screen.getByTestId('booking-confirm');
+    expect(summary).toHaveTextContent('PAT-000123');
+    expect(summary).toHaveTextContent('Neurology');
+    expect(summary).toHaveTextContent('09:00 (30 minutes)');
+    expect(screen.getByRole('list', { name: 'Booking progress' }).querySelector('[aria-current="step"]'))
+      .toHaveTextContent('Confirm');
+  });
+
+  it('lets someone start over as a different patient, dropping the token', async () => {
+    render(<BookingFlow />);
+    type('Patient number', 'PAT-000123');
+    type('Date of birth', '1995-04-02');
+    click('Continue');
+    await screen.findByTestId('patient-number');
+
+    click('Change Patient');
+
+    expect(screen.getByTestId('booking-identify-form')).toBeInTheDocument();
+    expect(screen.queryByTestId('patient-number')).not.toBeInTheDocument();
+    expect(api.clearBookingToken).toHaveBeenCalled();
   });
 
   it('says the same thing for a wrong number and a wrong date of birth', async () => {
@@ -241,7 +320,7 @@ describe('BookingFlow (SCRUM-34)', () => {
 
     const times = await screen.findAllByTestId('slot-option');
     fireEvent.click(times[0]);
-    click('Confirm booking');
+    click('Confirm Appointment');
 
     // The service's own wording reaches the patient.
     expect(await screen.findByRole('alert')).toHaveTextContent('no longer available');
@@ -261,7 +340,7 @@ describe('BookingFlow (SCRUM-34)', () => {
     render(<BookingFlow />);
 
     await identifyAndPickASlot();
-    click('Confirm booking');
+    click('Confirm Appointment');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'already has an appointment on 24 Sep 2026 from 09:00 to 09:30',
@@ -275,7 +354,7 @@ describe('BookingFlow (SCRUM-34)', () => {
     render(<BookingFlow />);
 
     await identifyAndPickASlot();
-    click('Confirm booking');
+    click('Confirm Appointment');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('already passed');
     expect(screen.getByTestId('booking-slot-picker')).toBeInTheDocument();
@@ -289,7 +368,7 @@ describe('BookingFlow (SCRUM-34)', () => {
     render(<BookingFlow />);
 
     await identifyAndPickASlot();
-    click('Confirm booking');
+    click('Confirm Appointment');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('session expired');
     expect(screen.getByTestId('booking-identify-form')).toBeInTheDocument();
@@ -304,12 +383,12 @@ describe('BookingFlow (SCRUM-34)', () => {
 
     await identifyAndPickASlot();
 
-    // The confirm screen names the doctor and the Colombo time, not UTC.
+    // The summary names the doctor and the Colombo time, not UTC.
     const confirm = await screen.findByTestId('booking-confirm');
     expect(confirm).toHaveTextContent('Nimal Perera');
     expect(confirm).toHaveTextContent('09:00');
 
-    click('Confirm booking');
+    click('Confirm Appointment');
 
     expect(await screen.findByTestId('booking-confirmation')).toHaveTextContent(
       'Your appointment is confirmed',
@@ -318,14 +397,14 @@ describe('BookingFlow (SCRUM-34)', () => {
     expect(api.identity.publicRegister).not.toHaveBeenCalled();
   });
 
-  it('warns that billing has not happened, on the confirm screen and the confirmation', async () => {
+  it('warns that billing has not happened, in the summary and on the confirmation', async () => {
     render(<BookingFlow />);
 
     await identifyAndPickASlot();
 
     expect(await screen.findByTestId('billing-notice')).toHaveTextContent('Sprint 4');
 
-    click('Confirm booking');
+    click('Confirm Appointment');
 
     await screen.findByTestId('booking-confirmation');
     expect(screen.getByTestId('billing-notice')).toHaveTextContent('Sprint 4');

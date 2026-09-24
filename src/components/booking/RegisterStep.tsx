@@ -36,7 +36,7 @@ const RegisterStep: React.FC<RegisterStepProps> = ({
 
   return (
     <form
-      className="card booking-step"
+      className="bk-card booking-step"
       onSubmit={handleSubmit}
       noValidate
       data-testid="booking-register-form"

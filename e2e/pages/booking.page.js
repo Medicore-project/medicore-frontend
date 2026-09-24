@@ -117,23 +117,29 @@ export class BookingPage {
     await this.selectById('booking-doctor', doctorId);
   }
 
-  /** The times currently on offer, as their visible labels. */
-  async offeredTimes() {
+  /**
+   * The slots on offer for the selected date, as their ids. Ids rather than labels: the same time
+   * ("09:00") exists on every day, so a label cannot say whether one particular slot is gone.
+   */
+  async offeredSlotIds() {
     const slots = await this.driver.findElements(this.testId('slot-option'));
-    return Promise.all(slots.map((slot) => slot.getText()));
+    return Promise.all(slots.map((slot) => slot.getAttribute('data-slot-id')));
   }
 
-  /** Picks the first offered time and returns its label, so the test can assert on it later. */
+  /**
+   * Picks the first offered time on the selected date. Returns its id and its visible time, so the
+   * test can check the summary shows it and, later, that the slot is no longer offered.
+   */
   async pickFirstTime() {
     const slots = await this.waitForAllTestIds('slot-option');
-    const label = await slots[0].getText();
+    const slotId = await slots[0].getAttribute('data-slot-id');
+    const time = await slots[0].findElement(this.testId('slot-time')).getText();
     await slots[0].click();
-    await this.waitForTestId('booking-confirm');
-    return label;
+    return { slotId, time };
   }
 
   async confirm() {
-    await this.clickButton('Confirm booking');
+    await this.clickButton('Confirm Appointment');
     await this.waitForTestId('booking-confirmation');
   }
 

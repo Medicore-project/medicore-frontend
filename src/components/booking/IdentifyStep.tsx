@@ -42,7 +42,7 @@ const IdentifyStep: React.FC<IdentifyStepProps> = ({
 
   return (
     <form
-      className="card booking-step"
+      className="bk-card booking-step"
       onSubmit={handleSubmit}
       noValidate
       data-testid="booking-identify-form"

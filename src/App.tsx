@@ -22,7 +22,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
 import PublicBookingPage from './pages/PublicBookingPage';
-import BookingFlow from './components/booking/BookingFlow';
+import InAppBookingPage from './pages/InAppBookingPage';
 import {
   BOOKED_LIST_ROLES,
   BOOKING_ROLES,
@@ -100,7 +100,7 @@ export const App: React.FC = () => {
           identifies with their patient number and date of birth — see BOOKING_ROLES. */}
       <Route element={<ProtectedRoute allowedRoles={[...BOOKING_ROLES]} />}>
         <Route element={<AppLayout />}>
-          <Route path="/appointments/book" element={<BookingFlow />} />
+          <Route path="/appointments/book" element={<InAppBookingPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[...LEAVE_READER_ROLES]} />}>

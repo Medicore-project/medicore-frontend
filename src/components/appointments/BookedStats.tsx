@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AppointmentSummary } from '../../api/appointments';
-import { CalendarIcon, CheckIcon, ClockIcon, CrossCircleIcon } from './BookedIcons';
+import { CalendarIcon, CheckIcon, ClockIcon, CrossCircleIcon } from '../icons/LineIcons';
 
 interface BookedStatsProps {
   /** Everything loaded for the current doctor and dates — before the status filter. */
