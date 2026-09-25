@@ -56,3 +56,35 @@ export function canRequestLeave(role?: string): boolean {
 export function canApproveLeave(role?: string): boolean {
   return role === 'Admin';
 }
+
+/**
+ * Every role that works in the clinic. Excludes Patient, the only non-staff role — a patient has
+ * no business on the dashboard, the patient directory or the schedule grid.
+ */
+export const CLINIC_ROLES = ['Admin', 'Receptionist', 'Doctor', 'Nurse'] as const;
+
+/**
+ * Who reaches the in-app booking page.
+ *
+ * Mirrors the appointment service's BookingCreator policy on its role half (Admin, Receptionist),
+ * plus Patient so a logged-in patient reaches booking and nothing else. Note that the Patient role
+ * grants no API permission of its own: a patient books with a booking token from
+ * /api/patients/identify, exactly as an anonymous visitor does, because BookingCreator's role
+ * branch is front-desk only. This constant controls navigation, not authority.
+ */
+export const BOOKING_ROLES = ['Admin', 'Receptionist', 'Patient'] as const;
+
+/**
+ * Who reaches the Booked Appointments list — the front desk, and doctors, who need to see who is
+ * booked with them. The API behind it (`GET /api/appointments`, ScheduleReader) also admits Nurse;
+ * the page is not offered to them, who read bookings on the weekly grid instead.
+ */
+export const BOOKED_LIST_ROLES = ['Admin', 'Receptionist', 'Doctor'] as const;
+
+/**
+ * Where a signed-in user belongs. Staff land on the dashboard; a Patient reaches booking and
+ * nothing else, so sending them to the staff-only dashboard would only bounce them back to `/`.
+ */
+export function homePathFor(role?: string): string {
+  return role === 'Patient' ? '/appointments/book' : '/dashboard';
+}

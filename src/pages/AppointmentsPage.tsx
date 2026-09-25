@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   DAY_NAMES,
+  bookedApi,
   colomboTimeLabel,
   doctorApi,
   leaveApi,
@@ -9,6 +10,7 @@ import {
   toDateOnly,
 } from '../api/appointments';
 import type {
+  AppointmentSummary,
   CreateScheduleBody,
   DayOfWeekNumber,
   DoctorLeaveResponse,
@@ -18,6 +20,7 @@ import type {
   SlotResponse,
 } from '../api/appointments';
 import { useAuth } from '../contexts/AuthContext';
+import { extractErrorMessage } from '../utils/apiError';
 import { canManageSchedules } from '../utils/permissions';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -46,32 +49,21 @@ function dayRangeLabel(start: Date, end: Date): string {
   return `${day(start)} ${month(start)} – ${day(end)} ${month(end)}`;
 }
 
-function extractErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const axiosErr = err as {
-      response?: { status?: number; data?: { title?: string; detail?: string; errors?: Record<string, string[]> } };
-    };
-    const data = axiosErr.response?.data;
-    if (data?.errors) {
-      const first = Object.values(data.errors)[0];
-      if (first?.length) return first[0];
-    }
-    if (data?.title) return data.title;
-    if (data?.detail) return data.detail;
-    if (axiosErr.response?.status === 403) {
-      return 'You do not have permission to do that.';
-    }
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
-
 function describeImpact(impact: SlotReconciliationSummary): string {
   const parts: string[] = [];
   if (impact.slotsCreated) parts.push(`${impact.slotsCreated} slot(s) created`);
   if (impact.slotsRemoved) parts.push(`${impact.slotsRemoved} removed`);
   if (impact.slotsFlagged) parts.push(`${impact.slotsFlagged} booking(s) flagged for rescheduling`);
   return parts.length ? parts.join(', ') + '.' : 'No slots changed.';
+}
+
+/** The hover text on a booked cell: who, and the booking's shape. */
+function bookedChipTitle(appointment: AppointmentSummary, needsRescheduling: boolean): string {
+  const who = appointment.patientName
+    ? `${appointment.patientName}${appointment.patientNumber ? ` (${appointment.patientNumber})` : ''}`
+    : 'A patient (booked without a name on record)';
+  const rescheduling = needsRescheduling ? ' — needs rescheduling' : '';
+  return `Booked: ${who} · ${appointment.durationMinutes} min · ${appointment.serviceCode}${rescheduling}`;
 }
 
 const EMPTY_FORM: {
@@ -104,6 +96,7 @@ export const AppointmentsPage: React.FC = () => {
   const [flagged, setFlagged] = useState<SlotResponse[]>([]);
   const [schedules, setSchedules] = useState<DoctorScheduleResponse[]>([]);
   const [approvedLeave, setApprovedLeave] = useState<DoctorLeaveResponse[]>([]);
+  const [booked, setBooked] = useState<AppointmentSummary[]>([]);
 
   const [isLoadingDoctors, setIsLoadingDoctors] = useState(true);
   const [isLoadingWeek, setIsLoadingWeek] = useState(false);
@@ -150,22 +143,27 @@ export const AppointmentsPage: React.FC = () => {
     try {
       const from = toDateOnly(weekStart);
       const to = toDateOnly(addDays(weekStart, 6));
-      const [available, flaggedSlots, doctorSchedules, leave] = await Promise.all([
+      const [available, flaggedSlots, doctorSchedules, leave, appointments] = await Promise.all([
         slotApi.available(doctorId, from, to),
         slotApi.flagged(doctorId),
         scheduleApi.listForDoctor(doctorId),
         leaveApi.approved(doctorId, from, to),
+        bookedApi.list({ doctorId, from, to }),
       ]);
       setSlots(available);
       setFlagged(flaggedSlots);
       setSchedules(doctorSchedules);
       setApprovedLeave(leave);
+      // A cancelled appointment released its slot, which the availability listing already shows
+      // as free again; drawing it as well would put two things in one cell.
+      setBooked(appointments.filter((a) => a.status === 'Booked'));
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load the schedule.'));
       setSlots([]);
       setFlagged([]);
       setSchedules([]);
       setApprovedLeave([]);
+      setBooked([]);
     } finally {
       setIsLoadingWeek(false);
     }
@@ -183,9 +181,23 @@ export const AppointmentsPage: React.FC = () => {
    * unusual hours all render without special cases.
    */
   const timeRows = useMemo(() => {
-    const times = new Set(slots.map((s) => colomboTimeLabel(s.startUtc)));
+    const times = new Set([
+      ...slots.map((s) => colomboTimeLabel(s.startUtc)),
+      // Booked times too: the availability listing returns free slots only, so a booked slot
+      // would otherwise have no row to be drawn in and simply vanish from the grid.
+      ...booked.map((a) => colomboTimeLabel(a.startUtc)),
+    ]);
     return [...times].sort();
-  }, [slots]);
+  }, [slots, booked]);
+
+  /** `${slotDate}|${HH:mm}` → the appointment booked there. */
+  const bookedIndex = useMemo(() => {
+    const map = new Map<string, AppointmentSummary>();
+    booked.forEach((a) => map.set(`${a.slotDate}|${colomboTimeLabel(a.startUtc)}`, a));
+    return map;
+  }, [booked]);
+
+  const flaggedSlotIds = useMemo(() => new Set(flagged.map((s) => s.slotId)), [flagged]);
 
   /** `${slotDate}|${HH:mm}` → slot, for O(1) cell lookup. */
   const slotIndex = useMemo(() => {
@@ -487,6 +499,28 @@ export const AppointmentsPage: React.FC = () => {
                       {time}
                     </th>
                     {weekDays.map((day) => {
+                      const appointment = bookedIndex.get(`${toDateOnly(day)}|${time}`);
+                      if (appointment) {
+                        const needsRescheduling = flaggedSlotIds.has(appointment.slotId);
+                        return (
+                          <td key={day.toISOString()} className="schedule-cell">
+                            <div
+                              className={`slot-chip slot-chip--patient ${
+                                needsRescheduling ? 'slot-chip--flagged' : 'slot-chip--booked'
+                              }`}
+                              data-testid="booked-slot"
+                              title={bookedChipTitle(appointment, needsRescheduling)}
+                            >
+                              <span className="slot-chip-patient">
+                                {appointment.patientName ?? 'Booked'}
+                              </span>
+                              {appointment.patientNumber && (
+                                <span className="slot-chip-number">{appointment.patientNumber}</span>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      }
                       const slot = slotIndex.get(`${toDateOnly(day)}|${time}`);
                       if (!slot) {
                         const leave = leaveByDate.get(toDateOnly(day));

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { homePathFor } from '../utils/permissions';
 
 export const LandingPage: React.FC = () => {
   const { user } = useAuth();
@@ -22,13 +23,22 @@ export const LandingPage: React.FC = () => {
           </ul>
           <div className="landing-nav-actions">
             <span className="contact-number">+94 11 234 5678</span>
+            {/* Booking needs no account, so it is the first thing offered, not hidden behind the
+                staff login. The login button is for staff (and a signed-in Patient's shortcut). */}
+            <button
+              className="btn btn-primary btn-pill"
+              onClick={() => navigate('/book')}
+              data-testid="landing-book"
+            >
+              Book appointment
+            </button>
             {user ? (
-              <button className="btn btn-primary btn-pill" onClick={() => navigate('/dashboard')}>
-                Dashboard
+              <button className="btn btn-outline btn-pill" onClick={() => navigate(homePathFor(user.role))}>
+                {user.role === 'Patient' ? 'My booking' : 'Dashboard'}
               </button>
             ) : (
-              <button className="btn btn-primary btn-pill" onClick={() => navigate('/login')}>
-                Login / Appointment
+              <button className="btn btn-outline btn-pill" onClick={() => navigate('/login')}>
+                Staff login
               </button>
             )}
           </div>
@@ -46,8 +56,19 @@ export const LandingPage: React.FC = () => {
             <p className="hero-subtitle">
               Together, advancing healthcare through compassion, innovation, and patient-centered excellence.
             </p>
-            <button className="btn btn-primary btn-lg" onClick={() => navigate('/login')}>Explore more</button>
-            
+            <div className="hero-actions">
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={() => navigate('/book')}
+                data-testid="hero-book"
+              >
+                Book an appointment
+              </button>
+              <span className="hero-actions-note">
+                No account needed — use your patient number, or register on your first visit.
+              </span>
+            </div>
+
             <div className="hero-trusted-card">
               <div className="trusted-icon">🏅</div>
               <div className="trusted-text">

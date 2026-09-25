@@ -2,30 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { doctorApi, leaveApi, toDateOnly } from '../api/appointments';
 import type { DoctorLeaveResponse, DoctorResponse, SlotReconciliationSummary } from '../api/appointments';
 import { useAuth } from '../contexts/AuthContext';
+import { extractErrorMessage } from '../utils/apiError';
 import { canApproveLeave, canRequestLeave } from '../utils/permissions';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function extractErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const axiosErr = err as {
-      response?: {
-        status?: number;
-        data?: { title?: string; detail?: string; errors?: Record<string, string[]> };
-      };
-    };
-    const data = axiosErr.response?.data;
-    if (data?.errors) {
-      const first = Object.values(data.errors)[0];
-      if (first?.length) return first[0];
-    }
-    if (data?.title) return data.title;
-    if (data?.detail) return data.detail;
-    if (axiosErr.response?.status === 403) return 'You do not have permission to do that.';
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
 
 /**
  * Approving leave clears the doctor's free slots and flags any bookings on them, so the number of

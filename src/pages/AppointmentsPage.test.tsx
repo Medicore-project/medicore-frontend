@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DoctorLeaveResponse, SlotResponse } from '../api/appointments';
+import type { AppointmentSummary, DoctorLeaveResponse, SlotResponse } from '../api/appointments';
 import AppointmentsPage from './AppointmentsPage';
 
 const api = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   schedule: { listForDoctor: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), regenerate: vi.fn() },
   leave: { approved: vi.fn() },
   doctor: { list: vi.fn() },
+  booked: { list: vi.fn() },
 }));
 
 vi.mock('../api/appointments', async (importOriginal) => ({
@@ -17,6 +18,7 @@ vi.mock('../api/appointments', async (importOriginal) => ({
   scheduleApi: api.schedule,
   leaveApi: api.leave,
   doctorApi: api.doctor,
+  bookedApi: api.booked,
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -84,6 +86,7 @@ beforeEach(() => {
   api.schedule.listForDoctor.mockResolvedValue([]);
   api.slot.available.mockResolvedValue([]);
   api.leave.approved.mockResolvedValue([]);
+  api.booked.list.mockResolvedValue([]);
 });
 
 describe('AppointmentsPage doctor-leave labelling', () => {
@@ -222,5 +225,89 @@ describe('AppointmentsPage doctor picker (SCRUM-33)', () => {
 
     expect(await screen.findByRole('option', { name: 'No bookable doctors' })).toBeInTheDocument();
     expect(api.slot.available).not.toHaveBeenCalled();
+  });
+});
+
+/** A 09:00 Colombo booking on the given day. */
+function bookingAt(date: Date, overrides: Partial<AppointmentSummary> = {}): AppointmentSummary {
+  return {
+    appointmentId: `appt-${dateOnly(date)}`,
+    patientId: 'patient-1',
+    patientNumber: 'PAT-000123',
+    patientName: 'Kamala Silva',
+    doctorId: DOCTOR_ID,
+    doctorName: 'Tathira Samarakoon',
+    specialization: 'Neurology',
+    slotId: `slot-${dateOnly(date)}`,
+    startUtc: `${dateOnly(date)}T03:30:00Z`,
+    endUtc: `${dateOnly(date)}T04:00:00Z`,
+    slotDate: dateOnly(date),
+    durationMinutes: 30,
+    serviceCode: 'GEN-CONSULT',
+    status: 'Booked',
+    createdAt: '2026-09-20T04:00:00Z',
+    ...overrides,
+  };
+}
+
+describe('AppointmentsPage booked slots', () => {
+  it('asks for the bookings of the selected doctor for the visible week', async () => {
+    render(<AppointmentsPage />);
+
+    await waitFor(() => expect(api.booked.list).toHaveBeenCalled());
+
+    expect(api.booked.list.mock.calls[0][0]).toEqual({
+      doctorId: DOCTOR_ID,
+      from: dateOnly(dayOfWeek(0)),
+      to: dateOnly(dayOfWeek(6)),
+    });
+  });
+
+  it('shows who booked a slot instead of letting it vanish', async () => {
+    // The availability listing returns free slots only, so before this a booked slot had no row.
+    // Here the whole week is booked or empty: the booking alone must still produce a row.
+    api.booked.list.mockResolvedValue([bookingAt(dayOfWeek(2))]);
+
+    render(<AppointmentsPage />);
+
+    const cell = await screen.findByTestId('booked-slot');
+    expect(cell).toHaveTextContent('Kamala Silva');
+    expect(cell).toHaveTextContent('PAT-000123');
+    expect(cell).toHaveAttribute('title', 'Booked: Kamala Silva (PAT-000123) · 30 min · GEN-CONSULT');
+    expect(screen.getByText('09:00')).toBeInTheDocument();
+  });
+
+  it('still marks a booking made without a name on record', async () => {
+    api.booked.list.mockResolvedValue([
+      bookingAt(dayOfWeek(2), { patientName: null, patientNumber: null }),
+    ]);
+
+    render(<AppointmentsPage />);
+
+    expect(await screen.findByTestId('booked-slot')).toHaveTextContent('Booked');
+  });
+
+  it('does not draw a cancelled booking, whose slot is free again', async () => {
+    api.slot.available.mockResolvedValue([slotAt(dayOfWeek(2))]);
+    api.booked.list.mockResolvedValue([bookingAt(dayOfWeek(2), { status: 'Cancelled' })]);
+
+    render(<AppointmentsPage />);
+
+    expect(await screen.findByText('Free')).toBeInTheDocument();
+    expect(screen.queryByTestId('booked-slot')).not.toBeInTheDocument();
+  });
+
+  it('marks a booking that a schedule change stranded', async () => {
+    const wednesday = dayOfWeek(2);
+    api.booked.list.mockResolvedValue([bookingAt(wednesday)]);
+    api.slot.flagged.mockResolvedValue([
+      { ...slotAt(wednesday), status: 'Flagged', flaggedReason: 'Schedule removed' },
+    ]);
+
+    render(<AppointmentsPage />);
+
+    const cell = await screen.findByTestId('booked-slot');
+    expect(cell).toHaveClass('slot-chip--flagged');
+    expect(cell.getAttribute('title')).toContain('needs rescheduling');
   });
 });

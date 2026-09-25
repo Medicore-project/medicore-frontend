@@ -1,0 +1,7 @@
+{
+  "spec": "specs/**/*.e2e.js",
+  "timeout": 60000,
+  "slow": 15000,
+  "reporter": "spec",
+  "parallel": false
+}

@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
 @import url('./landing.css');
+@import url('./booked-appointments.css');
+@import url('./booking.css');
 
 /* ==========================================================================
    MEDICORE DESIGN SYSTEM — SMART HIS INSPIRATION
@@ -1203,6 +1205,18 @@ body {
 .login-security-note span {
   color: var(--primary);
   font-size: 10px;
+}
+
+.login-patient-note {
+  margin-top: 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.login-patient-note a {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 @media (max-width: 820px) {
@@ -3796,6 +3810,31 @@ details[open] .rx-history-summary::before {
   border-color: var(--primary-light);
 }
 
+/* A booked cell names the patient. Not a button — a booked slot cannot be blocked — so it drops
+   the pointer, and long names are cut rather than widening the whole grid column. */
+.slot-chip--patient {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  cursor: default;
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+}
+
+.slot-chip-patient,
+.slot-chip-number {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-chip-number {
+  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
 .slot-chip--blocked {
   background: var(--bg-muted);
   color: var(--text-muted);
@@ -3861,4 +3900,94 @@ details[open] .rx-history-summary::before {
 .leave-page textarea:focus {
   outline: none;
   border-color: var(--border-focus);
+}
+
+/* ── Public booking (SCRUM-34) ─────────────────────────────────────────────── */
+
+.booking-step {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.booking-step h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.booking-step .page-subtitle {
+  margin: -12px 0 0;
+}
+
+.booking-step fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.booking-step legend {
+  padding: 0 0 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Two fields side by side, stacking on a phone. */
+.booking-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.booking-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.booking-upcoming h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.booking-upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.booking-upcoming-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.booking-upcoming-when {
+  font-weight: 600;
+}
+
+.booking-upcoming-who {
+  color: var(--text-secondary);
+}
+
+.booking-billing-notice {
+  padding: 12px 14px;
+  border: 1px solid var(--accent-amber-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-bg);
+}
+
+@media (max-width: 768px) {
+  .booking-field-row {
+    grid-template-columns: 1fr;
+  }
 }
