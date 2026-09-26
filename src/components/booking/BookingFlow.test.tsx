@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BookingFlow from './BookingFlow';
 
@@ -15,6 +15,8 @@ const api = vi.hoisted(() => ({
   appointment: {
     book: vi.fn(),
     mine: vi.fn(),
+    cancel: vi.fn(),
+    reschedule: vi.fn(),
   },
   clearBookingToken: vi.fn(),
 }));
@@ -80,6 +82,7 @@ const APPOINTMENT = {
 
 const UPCOMING = {
   appointmentId: 'a-0',
+  doctorId: 'doctor-1',
   doctorName: 'Nimal Perera',
   specialization: 'Neurology',
   startUtc: `${tomorrow()}T03:30:00Z`,
@@ -374,6 +377,91 @@ describe('BookingFlow (SCRUM-34)', () => {
     expect(screen.getByTestId('booking-identify-form')).toBeInTheDocument();
     expect(api.clearBookingToken).toHaveBeenCalled();
     expect(screen.queryByTestId('patient-number')).not.toBeInTheDocument();
+  });
+
+  // ── Changing your own appointments (SCRUM-36) ───────────────────────────────
+
+  /** Identifies a patient who has UPCOMING booked, and waits for the list. */
+  async function identifyWithAnUpcomingAppointment() {
+    api.appointment.mine.mockResolvedValue([UPCOMING]);
+    render(<BookingFlow />);
+    type('Patient number', 'PAT-000123');
+    type('Date of birth', '1995-04-02');
+    click('Continue');
+    return screen.findByTestId('upcoming-appointments');
+  }
+
+  it('offers reschedule and cancel on each upcoming appointment', async () => {
+    const list = await identifyWithAnUpcomingAppointment();
+
+    expect(within(list).getByRole('button', { name: /^Reschedule the appointment on/ })).toBeInTheDocument();
+    expect(within(list).getByRole('button', { name: /^Cancel the appointment on/ })).toBeInTheDocument();
+  });
+
+  it('cancels with a reason on the patient route, then refreshes the list and says so', async () => {
+    const list = await identifyWithAnUpcomingAppointment();
+    api.appointment.cancel.mockResolvedValue(undefined);
+    fireEvent.click(within(list).getByRole('button', { name: /^Cancel the appointment on/ }));
+
+    const dialog = screen.getByRole('dialog');
+    api.appointment.mine.mockResolvedValue([]);
+    fireEvent.change(within(dialog).getByLabelText('Reason for cancelling'), { target: { value: 'Travelling' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel appointment' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(api.appointment.cancel).toHaveBeenCalledWith('a-0', 'Travelling');
+    const refreshed = screen.getByTestId('upcoming-appointments');
+    expect(within(refreshed).getByRole('status')).toHaveTextContent('Your appointment was cancelled.');
+    expect(refreshed).toHaveTextContent('You have no upcoming appointments.');
+  });
+
+  it("shows the clinic's cancellation policy in the dialog when it is too late", async () => {
+    const policy =
+      'Appointments can only be cancelled or rescheduled up to 24 hours before they start. This one starts at 09:00 on 27 Sep 2026.';
+    const list = await identifyWithAnUpcomingAppointment();
+    api.appointment.cancel.mockImplementationOnce(() => rejectWith(400, policy));
+    fireEvent.click(within(list).getByRole('button', { name: /^Cancel the appointment on/ }));
+
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Reason for cancelling'), { target: { value: 'Travelling' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel appointment' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(policy);
+    expect(api.clearBookingToken).not.toHaveBeenCalled();
+  });
+
+  it("reschedules to one of the same doctor's free times", async () => {
+    const list = await identifyWithAnUpcomingAppointment();
+    api.appointment.reschedule.mockResolvedValue(undefined);
+    fireEvent.click(within(list).getByRole('button', { name: /^Reschedule the appointment on/ }));
+
+    const dialog = screen.getByRole('dialog');
+    const times = await within(dialog).findAllByTestId('slot-option');
+    fireEvent.click(times[1]);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm new time' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(api.publicBooking.slots).toHaveBeenCalledWith('doctor-1');
+    expect(api.appointment.reschedule).toHaveBeenCalledWith('a-0', 'slot-2');
+    // 04:30Z is 10:00 in Colombo.
+    expect(within(screen.getByTestId('upcoming-appointments')).getByRole('status')).toHaveTextContent(
+      /Your appointment was moved to .* at 10:00\./,
+    );
+  });
+
+  it('sends the patient back to identify when the session expires mid-change', async () => {
+    const list = await identifyWithAnUpcomingAppointment();
+    api.appointment.cancel.mockImplementationOnce(() => rejectWith(401));
+    fireEvent.click(within(list).getByRole('button', { name: /^Cancel the appointment on/ }));
+
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Reason for cancelling'), { target: { value: 'Travelling' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel appointment' }));
+
+    expect(await screen.findByTestId('booking-identify-form')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('session expired');
+    expect(api.clearBookingToken).toHaveBeenCalled();
   });
 
   // ── The happy path ──────────────────────────────────────────────────────────

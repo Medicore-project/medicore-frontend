@@ -24,6 +24,8 @@ import {
   validatePatientForm,
 } from '../../utils/patientForm';
 import type { PatientFieldErrors, PatientForm } from '../../utils/patientForm';
+import AppointmentTextDialog from '../appointments/AppointmentTextDialog';
+import RescheduleDialog from '../appointments/RescheduleDialog';
 import { CheckIcon } from '../icons/LineIcons';
 import BillingNotice from './BillingNotice';
 import BookingForCard from './BookingForCard';
@@ -36,6 +38,18 @@ import UpcomingAppointments from './UpcomingAppointments';
 
 /** What the service records when nothing else is chosen. Mirrors ServiceCodes.GeneralConsultation. */
 const DEFAULT_SERVICE_CODE = 'GEN-CONSULT';
+
+/** The service's limit on a cancellation reason. */
+const MAX_REASON_LENGTH = 500;
+
+/** Which of the patient's own appointments is being changed, and how (SCRUM-36). */
+type UpcomingChange = { kind: 'reschedule' | 'cancel'; appointment: PatientAppointment };
+
+/** "Nimal Perera · Mon, 5 Oct 2026, 09:00" — which appointment a dialog is about. */
+function describeUpcoming(appointment: PatientAppointment): string {
+  const when = `${fullDateLabel(appointment.slotDate)}, ${colomboTimeLabel(appointment.startUtc)}`;
+  return appointment.doctorName ? `${appointment.doctorName} · ${when}` : when;
+}
 
 type BookingStep =
   | { kind: 'identify' }
@@ -88,6 +102,8 @@ const BookingFlow: React.FC = () => {
   // fails — seeing past bookings is a convenience and must never stand between a patient and a
   // new one, so a failure here shows nothing rather than an error.
   const [upcoming, setUpcoming] = useState<PatientAppointment[] | null>(null);
+  const [upcomingChange, setUpcomingChange] = useState<UpcomingChange | null>(null);
+  const [upcomingNotice, setUpcomingNotice] = useState<string | null>(null);
 
   const selectedDoctor = doctors.find((candidate) => candidate.doctorId === doctorId) ?? null;
 
@@ -249,9 +265,25 @@ const BookingFlow: React.FC = () => {
     clearBookingToken();
     setIdentity(null);
     setUpcoming(null);
+    setUpcomingNotice(null);
     setSelectedSlot(null);
     setStepError(null);
     setStep({ kind: 'identify' });
+  };
+
+  /**
+   * The booking token has expired. It cannot be refreshed — an anonymous visitor has no refresh
+   * token — so ask them to identify again, keeping anything they typed.
+   */
+  const expireSession = () => {
+    clearBookingToken();
+    setIdentity(null);
+    setUpcoming(null);
+    setUpcomingChange(null);
+    setUpcomingNotice(null);
+    setSelectedSlot(null);
+    setStep({ kind: 'identify' });
+    setStepError('Your booking session expired. Please identify yourself again.');
   };
 
   // ── Choosing ────────────────────────────────────────────────────────────────
@@ -293,14 +325,7 @@ const BookingFlow: React.FC = () => {
       await loadUpcoming();
     } catch (err) {
       if (isBookingSessionExpiredError(err)) {
-        // The token cannot be refreshed — an anonymous visitor has no refresh token. Ask them to
-        // identify again, keeping anything they typed.
-        clearBookingToken();
-        setIdentity(null);
-        setUpcoming(null);
-        setSelectedSlot(null);
-        setStep({ kind: 'identify' });
-        setStepError('Your booking session expired. Please identify yourself again.');
+        expireSession();
       } else {
         // 409 (slot gone, or a clash with their own diary) and 400 (the list was stale) both mean
         // "pick again". The service worded the reason; show it rather than guessing. The times are
@@ -313,6 +338,36 @@ const BookingFlow: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // ── Changing one of your own appointments (SCRUM-36) ────────────────────────
+
+  /**
+   * Runs one change to an upcoming appointment. A rejection other than an expired session goes
+   * back to the dialog, which shows the service's wording — the cancellation policy, or "someone
+   * booked this slot a moment ago" — and stays open.
+   */
+  const changeUpcoming = async (
+    appointment: PatientAppointment,
+    change: () => Promise<void>,
+    notice: string,
+  ) => {
+    try {
+      await change();
+    } catch (err) {
+      if (isBookingSessionExpiredError(err)) {
+        expireSession();
+        return;
+      }
+      throw err;
+    }
+
+    setUpcomingChange(null);
+    setUpcomingNotice(notice);
+    await loadUpcoming();
+    // The change freed one of this doctor's times, and a reschedule took another. If that doctor's
+    // grid is open beside the list, show it as it now is.
+    if (doctorId && doctorId === appointment.doctorId) await loadSlots(doctorId, selectedDate);
   };
 
   const bookAnother = async () => {
@@ -421,10 +476,59 @@ const BookingFlow: React.FC = () => {
             />
           )}
           {identity && upcoming && (step.kind === 'choose' || step.kind === 'booked') && (
-            <UpcomingAppointments appointments={upcoming} />
+            <UpcomingAppointments
+              appointments={upcoming}
+              notice={upcomingNotice}
+              onReschedule={(appointment) => {
+                setUpcomingNotice(null);
+                setUpcomingChange({ kind: 'reschedule', appointment });
+              }}
+              onCancel={(appointment) => {
+                setUpcomingNotice(null);
+                setUpcomingChange({ kind: 'cancel', appointment });
+              }}
+            />
           )}
         </aside>
       </div>
+
+      {upcomingChange?.kind === 'reschedule' && (
+        <RescheduleDialog
+          subtitle={describeUpcoming(upcomingChange.appointment)}
+          loadSlots={() => publicBookingApi.slots(upcomingChange.appointment.doctorId)}
+          onConfirm={(newSlot) =>
+            changeUpcoming(
+              upcomingChange.appointment,
+              () => appointmentApi.reschedule(upcomingChange.appointment.appointmentId, newSlot.slotId),
+              `Your appointment was moved to ${fullDateLabel(newSlot.slotDate)} at ${colomboTimeLabel(newSlot.startUtc)}.`,
+            )
+          }
+          onClose={() => setUpcomingChange(null)}
+        />
+      )}
+
+      {upcomingChange?.kind === 'cancel' && (
+        <AppointmentTextDialog
+          title="Cancel appointment"
+          subtitle={describeUpcoming(upcomingChange.appointment)}
+          label="Reason for cancelling"
+          placeholder="e.g. I am travelling"
+          help="Shared with the clinic."
+          maxLength={MAX_REASON_LENGTH}
+          confirmLabel="Cancel appointment"
+          busyLabel="Cancelling…"
+          dismissLabel="Keep appointment"
+          danger
+          onConfirm={(reason) =>
+            changeUpcoming(
+              upcomingChange.appointment,
+              () => appointmentApi.cancel(upcomingChange.appointment.appointmentId, reason),
+              'Your appointment was cancelled.',
+            )
+          }
+          onClose={() => setUpcomingChange(null)}
+        />
+      )}
     </div>
   );
 };

@@ -874,6 +874,18 @@
   font-size: 1.15rem;
 }
 
+/* Reschedule and cancel on each upcoming appointment (SCRUM-36). */
+.booking-upcoming-actions {
+  display: flex;
+  flex-basis: 100%;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.booking-upcoming-notice {
+  margin: 0 0 10px;
+}
+
 /* ── Narrower screens ── */
 
 @media (max-width: 1080px) {
