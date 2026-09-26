@@ -237,19 +237,23 @@ describe('ClinicAppointmentsPage', () => {
 
   // ── Row actions ─────────────────────────────────────────────────────────────
 
-  it('offers only the actions that exist today in the row menu', async () => {
+  it('offers the details page, the patient and the id in the row menu', async () => {
     renderPage();
     await screen.findByTestId('clinic-appointments');
 
     fireEvent.click(screen.getByRole('button', { name: 'Actions for Kamala Silva' }));
 
     const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: 'View details' })).toHaveAttribute(
+      'href',
+      '/appointments/appt-1',
+    );
     expect(within(menu).getByRole('menuitem', { name: 'View patient profile' })).toHaveAttribute(
       'href',
       '/patients/patient-1',
     );
     expect(within(menu).getByRole('menuitem', { name: 'Copy appointment ID' })).toBeInTheDocument();
-    // Cancel and reschedule arrive with SCRUM-36.
+    // Cancel and reschedule (SCRUM-36) live on the details page, which has room to ask why.
     expect(within(menu).queryByText(/cancel/i)).not.toBeInTheDocument();
   });
 

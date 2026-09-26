@@ -18,6 +18,7 @@ import PatientAllergiesPage from './pages/PatientAllergiesPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import DoctorLeavePage from './pages/DoctorLeavePage';
 import ClinicAppointmentsPage from './pages/ClinicAppointmentsPage';
+import AppointmentDetailPage from './pages/AppointmentDetailPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -85,10 +86,13 @@ export const App: React.FC = () => {
           <Route path="/patients/register" element={<PatientRegistrationPage />} />
         </Route>
       </Route>
-      {/* "Who is booked" — the front desk, and doctors, who open it on their own bookings. */}
+      {/* "Who is booked" — the front desk, and doctors, who open it on their own bookings. One
+          appointment's page (SCRUM-36) is reached from that list; static segments like /booked
+          and /book outrank this dynamic one, so they are unaffected. */}
       <Route element={<ProtectedRoute allowedRoles={[...BOOKED_LIST_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/appointments/booked" element={<ClinicAppointmentsPage />} />
+          <Route path="/appointments/:appointmentId" element={<AppointmentDetailPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[...SCHEDULE_READER_ROLES]} />}>

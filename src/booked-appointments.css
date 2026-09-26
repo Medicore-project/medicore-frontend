@@ -564,6 +564,13 @@
   color: var(--error-text);
 }
 
+/* A no-show used the slot but not the visit: neutral, like the base badge. */
+.booked-status--noshow {
+  border-color: var(--border-color);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
 .booked-actions-col {
   width: 1%;
   text-align: center;
@@ -651,4 +658,102 @@
   .booked-actions-col {
     display: none !important;
   }
+}
+
+/* ── Appointment detail (SCRUM-36) ───────────────────────────────────────── */
+
+.appt-detail-page {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.appt-detail-loading,
+.appt-history-empty {
+  color: var(--text-muted);
+}
+
+.appt-detail-muted {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.appt-history {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0 0 0 18px;
+  border-left: 2px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.appt-history-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.appt-history-item::before {
+  content: '';
+  position: absolute;
+  left: -25px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--bg-card);
+}
+
+.appt-history-item--cancelled::before {
+  background: var(--error-text);
+}
+
+.appt-history-item--completed::before {
+  background: var(--success-text);
+}
+
+.appt-history-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  color: var(--text-main);
+}
+
+.appt-history-line time,
+.appt-history-actor {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.appt-history-reason {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.appt-dialog--wide {
+  max-width: 760px;
+}
+
+.appt-dialog-count {
+  text-align: right;
+}
+
+.appt-reschedule-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.appt-reschedule-choice {
+  margin-right: auto;
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 14px;
 }

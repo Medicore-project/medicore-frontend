@@ -40,6 +40,28 @@ export function canManageSchedules(role?: string): boolean {
 }
 
 /**
+ * Whether an appointment can be cancelled or rescheduled from the staff side. Mirrors the
+ * ScheduleManager policy on `PUT /appointments/{id}/cancel` and `/reschedule` (SCRUM-36). A
+ * patient cancels their own through the booking page instead.
+ */
+export function canChangeAppointments(role?: string): boolean {
+  return canManageSchedules(role);
+}
+
+/**
+ * Whether this user may complete this appointment: a doctor, and its own doctor. Mirrors the
+ * AppointmentCompleter policy plus the service's ownership check — completing writes the clinical
+ * notes into the patient's record, so it is the treating doctor's act alone. A user with no staff
+ * id never matches.
+ */
+export function canCompleteAppointment(
+  user: { role?: string; staffId?: string | null } | null | undefined,
+  doctorId: string,
+): boolean {
+  return user?.role === 'Doctor' && Boolean(user.staffId) && user.staffId === doctorId;
+}
+
+/**
  * Mirrors the appointment service's LeaveManager policy — submit and withdraw leave requests.
  * Doctor-only: the service additionally checks the caller's own staffId against the request's
  * DoctorId, so this only ever lets someone act on their own leave, never on another doctor's

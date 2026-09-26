@@ -8,6 +8,8 @@ import {
   PATIENT_READER_ROLES,
   SCHEDULE_READER_ROLES,
   canApproveLeave,
+  canChangeAppointments,
+  canCompleteAppointment,
   canManageOrganization,
   canManagePatientProfiles,
   canManageSchedules,
@@ -123,5 +125,28 @@ describe('homePathFor', () => {
 describe('BOOKED_LIST_ROLES', () => {
   it('is the front desk plus doctors, who need to see who is booked with them', () => {
     expect([...BOOKED_LIST_ROLES].sort()).toEqual(['Admin', 'Doctor', 'Receptionist']);
+  });
+});
+
+describe('canChangeAppointments (SCRUM-36)', () => {
+  it('allows the front desk to cancel and reschedule, as ScheduleManager does', () => {
+    expect(ALL_ROLES.filter((role) => canChangeAppointments(role))).toEqual(['Admin', 'Receptionist']);
+    expect(canChangeAppointments('Patient')).toBe(false);
+    expect(canChangeAppointments(undefined)).toBe(false);
+  });
+});
+
+describe('canCompleteAppointment (SCRUM-36)', () => {
+  it("allows only the appointment's own doctor", () => {
+    expect(canCompleteAppointment({ role: 'Doctor', staffId: 'doctor-1' }, 'doctor-1')).toBe(true);
+    expect(canCompleteAppointment({ role: 'Doctor', staffId: 'doctor-2' }, 'doctor-1')).toBe(false);
+  });
+
+  it('never matches on a role alone, or on a missing staff id', () => {
+    expect(canCompleteAppointment({ role: 'Admin', staffId: 'doctor-1' }, 'doctor-1')).toBe(false);
+    expect(canCompleteAppointment({ role: 'Nurse', staffId: 'doctor-1' }, 'doctor-1')).toBe(false);
+    expect(canCompleteAppointment({ role: 'Doctor', staffId: null }, 'doctor-1')).toBe(false);
+    expect(canCompleteAppointment({ role: 'Doctor', staffId: '' }, '')).toBe(false);
+    expect(canCompleteAppointment(null, 'doctor-1')).toBe(false);
   });
 });
