@@ -22,11 +22,21 @@ let expiresAtUtc: string | null = null;
  * Exact, and by method, because `/appointment/api/appointments` is two endpoints: POST books (the
  * token's job) and GET is the *staff* list, which a booking token is refused on. A prefix match
  * would send a receptionist's list request with the patient's token they just booked with.
+ *
+ * SCRUM-36 adds the patient's own cancel and reschedule. They carry an appointment id, so they are
+ * matched by a `pattern` anchored at both ends rather than an exact `path`. They live under
+ * `mine/`, a different path from the staff `PUT {id}/cancel` and `PUT {id}/reschedule`, so a
+ * receptionist holding a patient's token still cancels with their own.
  */
-export const BOOKING_TOKEN_ROUTES = [
+type BookingTokenRoute =
+  | { readonly method: string; readonly path: string }
+  | { readonly method: string; readonly pattern: RegExp };
+
+export const BOOKING_TOKEN_ROUTES: readonly BookingTokenRoute[] = [
   { method: 'post', path: '/appointment/api/appointments' },
   { method: 'get', path: '/appointment/api/appointments/mine' },
-] as const;
+  { method: 'put', pattern: /^\/appointment\/api\/appointments\/mine\/[^/]+\/(cancel|reschedule)$/ },
+];
 
 export function setBookingToken(value: string, expiresAt: string): void {
   token = value;
@@ -68,5 +78,8 @@ export function isBookingTokenRequest(method: string | undefined, url: string | 
   if (url === undefined) return false;
   const path = url.split('?')[0];
   const verb = (method ?? 'get').toLowerCase();
-  return BOOKING_TOKEN_ROUTES.some((route) => route.method === verb && route.path === path);
+  return BOOKING_TOKEN_ROUTES.some(
+    (route) =>
+      route.method === verb && ('path' in route ? route.path === path : route.pattern.test(path)),
+  );
 }

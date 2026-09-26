@@ -113,9 +113,41 @@ export interface AppointmentSummary {
   slotDate: string;
   durationMinutes: number;
   serviceCode: string;
-  /** `Booked`, `Cancelled` or `Completed`. */
+  /** One of `AppointmentStatus`. */
   status: string;
   createdAt: string;
+}
+
+/** Mirrors the appointment service's `AppointmentStatus` constants. */
+export const AppointmentStatus = {
+  Booked: 'Booked',
+  Cancelled: 'Cancelled',
+  Completed: 'Completed',
+  NoShow: 'NoShow',
+} as const;
+
+/**
+ * One appointment as `GET /appointments/{id}` and the change endpoints return it: the summary
+ * without the doctor's name and specialization, which that endpoint does not join.
+ */
+export type AppointmentRecord = Omit<AppointmentSummary, 'doctorName' | 'specialization'>;
+
+/** One change in an appointment's history, oldest first. */
+export interface AppointmentHistoryEntry {
+  /** `Booked`, `Rescheduled`, `Cancelled` or `Completed`. */
+  action: string;
+  /** Null for the booking that created the appointment. */
+  fromStatus: string | null;
+  toStatus: string;
+  fromSlotId: string | null;
+  toSlotId: string | null;
+  fromStartUtc: string | null;
+  toStartUtc: string | null;
+  /** A cancellation's reason; null otherwise. Clinical notes are never recorded here. */
+  reason: string | null;
+  /** Who made the change — usually an email. */
+  actor: string;
+  occurredAtUtc: string;
 }
 
 export interface PublicHolidayResponse {
@@ -297,6 +329,60 @@ export const bookedApi = {
     const query = new URLSearchParams({ from: params.from, to: params.to });
     if (params.doctorId) query.set('doctorId', params.doctorId);
     const response = await apiClient.get<AppointmentSummary[]>(`${appointmentsPath}?${query.toString()}`);
+    return response.data;
+  },
+};
+
+/**
+ * Reading one appointment and changing it (SCRUM-36). Always the *staff* token: these are the
+ * `{id}/…` routes, and a patient's own changes go through `appointmentApi` in `booking.ts` on
+ * `mine/{id}/…`, which is what keeps a held booking token off them.
+ */
+export const appointmentChangeApi = {
+  async get(appointmentId: string): Promise<AppointmentRecord> {
+    const response = await apiClient.get<AppointmentRecord>(`${appointmentsPath}/${appointmentId}`);
+    return response.data;
+  },
+
+  /** Every change, oldest first, starting with the booking. */
+  async history(appointmentId: string): Promise<AppointmentHistoryEntry[]> {
+    const response = await apiClient.get<AppointmentHistoryEntry[]>(
+      `${appointmentsPath}/${appointmentId}/history`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Moves the appointment to another free slot with the same doctor, atomically. Rejects with 409
+   * when the slot was taken meanwhile (the appointment has not moved) and 400 inside the
+   * cancellation window.
+   */
+  async reschedule(appointmentId: string, newSlotId: string): Promise<AppointmentRecord> {
+    const response = await apiClient.put<AppointmentRecord>(
+      `${appointmentsPath}/${appointmentId}/reschedule`,
+      { newSlotId },
+    );
+    return response.data;
+  },
+
+  /** Cancels and releases the slot. Rejects with 400 inside the cancellation window, stating it. */
+  async cancel(appointmentId: string, reason: string): Promise<AppointmentRecord> {
+    const response = await apiClient.put<AppointmentRecord>(
+      `${appointmentsPath}/${appointmentId}/cancel`,
+      { reason },
+    );
+    return response.data;
+  },
+
+  /**
+   * Marks the visit completed. Only the appointment's own doctor, from its start time. The notes
+   * become the patient's medical record entry for the visit.
+   */
+  async complete(appointmentId: string, notes: string): Promise<AppointmentRecord> {
+    const response = await apiClient.put<AppointmentRecord>(
+      `${appointmentsPath}/${appointmentId}/complete`,
+      { notes },
+    );
     return response.data;
   },
 };
