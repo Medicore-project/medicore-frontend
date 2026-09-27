@@ -136,6 +136,18 @@ describe('the public booking client (SCRUM-34)', () => {
     expect(seen[2].params).toMatchObject({ doctorId: 'doctor-1' });
   });
 
+  it('asks which days are full without a credential (SCRUM-37)', async () => {
+    const { booking, bookingToken, seen } = await loadBooking([{ date: '2026-09-25', isFull: true }]);
+    bookingToken.setBookingToken('a-booking-token', '2026-09-23T08:20:00Z');
+
+    const days = await booking.publicBookingApi.days('doctor-1', '2026-09-23');
+
+    expect(seen[0].url).toBe('/appointment/api/public/booking/days');
+    expect(seen[0].params).toMatchObject({ doctorId: 'doctor-1', from: '2026-09-23' });
+    expect(seen[0].headers.Authorization).toBeUndefined();
+    expect(days).toEqual([{ date: '2026-09-25', isFull: true }]);
+  });
+
   it('omits the specialization filter entirely when none is chosen', async () => {
     const { booking, seen } = await loadBooking([]);
 

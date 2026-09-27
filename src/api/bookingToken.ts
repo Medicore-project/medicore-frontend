@@ -27,6 +27,10 @@ let expiresAtUtc: string | null = null;
  * matched by a `pattern` anchored at both ends rather than an exact `path`. They live under
  * `mine/`, a different path from the staff `PUT {id}/cancel` and `PUT {id}/reschedule`, so a
  * receptionist holding a patient's token still cancels with their own.
+ *
+ * SCRUM-37 adds the waitlist on the same terms. Joining is `POST /waitlist`, exact, because `GET`
+ * on that path is the staff list. The patient's own entries are `mine`, and answering an offer or
+ * leaving is `mine/{id}/…` — apart from the staff `{id}/accept`, `{id}/decline` and `DELETE {id}`.
  */
 type BookingTokenRoute =
   | { readonly method: string; readonly path: string }
@@ -36,6 +40,10 @@ export const BOOKING_TOKEN_ROUTES: readonly BookingTokenRoute[] = [
   { method: 'post', path: '/appointment/api/appointments' },
   { method: 'get', path: '/appointment/api/appointments/mine' },
   { method: 'put', pattern: /^\/appointment\/api\/appointments\/mine\/[^/]+\/(cancel|reschedule)$/ },
+  { method: 'post', path: '/appointment/api/waitlist' },
+  { method: 'get', path: '/appointment/api/waitlist/mine' },
+  { method: 'put', pattern: /^\/appointment\/api\/waitlist\/mine\/[^/]+\/(accept|decline)$/ },
+  { method: 'delete', pattern: /^\/appointment\/api\/waitlist\/mine\/[^/]+$/ },
 ];
 
 export function setBookingToken(value: string, expiresAt: string): void {

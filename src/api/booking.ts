@@ -37,6 +37,16 @@ export interface PublicSlot {
   durationMinutes: number;
 }
 
+/**
+ * One of a doctor's clinic days (SCRUM-37): whether every time is taken. A full day can be waited
+ * for; a day the doctor does not work never appears.
+ */
+export interface PublicBookingDay {
+  /** The Asia/Colombo date, as `YYYY-MM-DD`. */
+  date: string;
+  isFull: boolean;
+}
+
 /** Who the patient is, plus the token that lets them book. */
 export interface BookingIdentityResponse {
   patientId: string;
@@ -98,6 +108,17 @@ export const publicBookingApi = {
   /** Free slots for one doctor. Omitting the range means the service's configured horizon. */
   async slots(doctorId: string, from?: string, to?: string): Promise<PublicSlot[]> {
     const { data } = await apiClient.get<PublicSlot[]>(`${publicBookingPath}/slots`, {
+      params: { doctorId, from, to },
+    });
+    return data;
+  },
+
+  /**
+   * The doctor's clinic days, each marked full or not (SCRUM-37), so the page can offer the
+   * waitlist on a full day. The free-slot list alone cannot tell a full day from a day off.
+   */
+  async days(doctorId: string, from?: string, to?: string): Promise<PublicBookingDay[]> {
+    const { data } = await apiClient.get<PublicBookingDay[]>(`${publicBookingPath}/days`, {
       params: { doctorId, from, to },
     });
     return data;
