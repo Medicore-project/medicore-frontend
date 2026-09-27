@@ -77,10 +77,11 @@ describe('the booking token store (SCRUM-34)', () => {
     expect(getBookingToken()).toBeNull();
   });
 
-  it('claims only booking and reading your own bookings', () => {
+  it('claims only booking, reading your own bookings, and changing your own bookings', () => {
     expect(BOOKING_TOKEN_ROUTES).toEqual([
       { method: 'post', path: '/appointment/api/appointments' },
       { method: 'get', path: '/appointment/api/appointments/mine' },
+      { method: 'put', pattern: /^\/appointment\/api\/appointments\/mine\/[^/]+\/(cancel|reschedule)$/ },
     ]);
 
     expect(isBookingTokenRequest('post', '/appointment/api/appointments')).toBe(true);
@@ -94,6 +95,26 @@ describe('the booking token store (SCRUM-34)', () => {
     expect(isBookingTokenRequest('get', '/patient/api/patients/search')).toBe(false);
     expect(isBookingTokenRequest('get', '/appointment/api/schedules')).toBe(false);
     expect(isBookingTokenRequest('get', undefined)).toBe(false);
+  });
+
+  it("sends it when a patient cancels or reschedules one of their own (SCRUM-36)", () => {
+    expect(isBookingTokenRequest('put', '/appointment/api/appointments/mine/a-1/cancel')).toBe(true);
+    expect(isBookingTokenRequest('PUT', '/appointment/api/appointments/mine/a-1/reschedule')).toBe(true);
+  });
+
+  it('keeps it off every staff change, even on the look-alike paths', () => {
+    // A receptionist holding a patient's token must still cancel, reschedule and complete as
+    // themselves; the service would refuse the booking token on these routes anyway.
+    expect(isBookingTokenRequest('put', '/appointment/api/appointments/a-1/cancel')).toBe(false);
+    expect(isBookingTokenRequest('put', '/appointment/api/appointments/a-1/reschedule')).toBe(false);
+    expect(isBookingTokenRequest('put', '/appointment/api/appointments/a-1/complete')).toBe(false);
+    expect(isBookingTokenRequest('get', '/appointment/api/appointments/a-1/history')).toBe(false);
+    // Anchored at both ends and one segment wide: nothing else under mine/ is claimed.
+    expect(isBookingTokenRequest('put', '/appointment/api/appointments/mine/a-1/complete')).toBe(false);
+    expect(isBookingTokenRequest('put', '/appointment/api/appointments/mine/a-1/cancel/extra')).toBe(false);
+    expect(isBookingTokenRequest('put', '/appointment/api/appointments/mine/a/b/cancel')).toBe(false);
+    expect(isBookingTokenRequest('put', '/evil/appointment/api/appointments/mine/a-1/cancel')).toBe(false);
+    expect(isBookingTokenRequest('post', '/appointment/api/appointments/mine/a-1/cancel')).toBe(false);
   });
 
   it('keeps the staff appointment list, on the same path as booking, on the staff token', () => {

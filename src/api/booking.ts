@@ -68,6 +68,8 @@ export interface AppointmentResponse {
  */
 export interface PatientAppointment {
   appointmentId: string;
+  /** The doctor's staff id, so the page can list their free times for a reschedule. */
+  doctorId: string;
   doctorName: string | null;
   specialization: string | null;
   startUtc: string;
@@ -154,6 +156,23 @@ export const appointmentApi = {
   async mine(): Promise<PatientAppointment[]> {
     const { data } = await apiClient.get<PatientAppointment[]>(`${appointmentsPath}/mine`);
     return data;
+  },
+
+  /**
+   * Cancels one of the token holder's own appointments. Resolves with nothing (the service answers
+   * 204); reload `mine()` to see the result. Rejects with 400 inside the cancellation window, with
+   * the policy in the message, and 404 for an appointment that is not theirs.
+   */
+  async cancel(appointmentId: string, reason: string): Promise<void> {
+    await apiClient.put(`${appointmentsPath}/mine/${appointmentId}/cancel`, { reason });
+  },
+
+  /**
+   * Moves one of the token holder's own appointments to another free slot with the same doctor.
+   * Rejects with 409 when the slot was taken meanwhile — the appointment has not moved.
+   */
+  async reschedule(appointmentId: string, newSlotId: string): Promise<void> {
+    await apiClient.put(`${appointmentsPath}/mine/${appointmentId}/reschedule`, { newSlotId });
   },
 };
 

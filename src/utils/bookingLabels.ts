@@ -1,4 +1,4 @@
-import { toColombo } from '../api/appointments';
+import { colomboTimeLabel, toColombo } from '../api/appointments';
 
 /**
  * Date labels for the booking page. Assembled from parts rather than taken whole from
@@ -22,6 +22,14 @@ export function chipLabel(isoDate: string): { weekday: string; date: string } {
 export function fullDateLabel(isoDate: string): string {
   const part = partsOf(isoDate, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   return `${part('weekday')}, ${part('day')} ${part('month')} ${part('year')}`;
+}
+
+/**
+ * "Sun, 5 Oct 2026, 09:00" for a UTC instant, in Colombo time — the date line above plus the
+ * time, for anything that happened (or happens) at an instant rather than on a slot date.
+ */
+export function colomboDateTimeLabel(utcIso: string): string {
+  return `${fullDateLabel(toColombo(utcIso).toISOString().slice(0, 10))}, ${colomboTimeLabel(utcIso)}`;
 }
 
 /**

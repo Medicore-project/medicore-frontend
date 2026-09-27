@@ -98,6 +98,30 @@ describe('the public booking client (SCRUM-34)', () => {
     expect(seen[0].data).not.toContain('patientId');
   });
 
+  it("a patient's cancel goes to their own route with the booking token and the reason (SCRUM-36)", async () => {
+    const { booking, bookingToken, seen } = await loadBooking(null);
+    bookingToken.setBookingToken('a-booking-token', '2026-09-23T08:20:00Z');
+
+    await booking.appointmentApi.cancel('a-1', 'Travelling');
+
+    expect(seen[0].method).toBe('put');
+    expect(seen[0].url).toBe('/appointment/api/appointments/mine/a-1/cancel');
+    expect(seen[0].headers.Authorization).toBe('Bearer a-booking-token');
+    expect(JSON.parse(seen[0].data as string)).toEqual({ reason: 'Travelling' });
+  });
+
+  it("a patient's reschedule sends only the new slot, with the booking token", async () => {
+    const { booking, bookingToken, seen } = await loadBooking(null);
+    bookingToken.setBookingToken('a-booking-token', '2026-09-23T08:20:00Z');
+
+    await booking.appointmentApi.reschedule('a-1', 'slot-9');
+
+    expect(seen[0].method).toBe('put');
+    expect(seen[0].url).toBe('/appointment/api/appointments/mine/a-1/reschedule');
+    expect(seen[0].headers.Authorization).toBe('Bearer a-booking-token');
+    expect(JSON.parse(seen[0].data as string)).toEqual({ newSlotId: 'slot-9' });
+  });
+
   it('the public reads carry no credential at all', async () => {
     const { booking, seen } = await loadBooking([]);
 

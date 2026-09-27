@@ -123,8 +123,9 @@ const ExportMenu: React.FC<{ rows: AppointmentSummary[] }> = ({ rows }) => {
 };
 
 /**
- * The per-row menu. Only actions that exist today: cancel and reschedule arrive with SCRUM-36, and
- * a menu offering them before then would be buttons that fail.
+ * The per-row menu. Reschedule, cancel and complete live on the appointment's own page (SCRUM-36),
+ * next to its history, rather than here: each asks for something (a new time, a reason, clinical
+ * notes) that a menu has no room for.
  */
 const RowActions: React.FC<{ appointment: AppointmentSummary }> = ({ appointment }) => {
   const [open, setOpen] = useState(false);
@@ -157,6 +158,9 @@ const RowActions: React.FC<{ appointment: AppointmentSummary }> = ({ appointment
       </button>
       {open && (
         <div className="booked-menu booked-menu--right" role="menu">
+          <Link role="menuitem" to={`/appointments/${appointment.appointmentId}`}>
+            View details
+          </Link>
           <Link role="menuitem" to={`/patients/${appointment.patientId}`}>
             View patient profile
           </Link>
