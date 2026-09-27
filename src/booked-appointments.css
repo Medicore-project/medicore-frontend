@@ -757,3 +757,67 @@
   color: var(--text-muted);
   font-size: 14px;
 }
+
+/* ── Waitlist (SCRUM-37) ──────────────────────────────────────────────────────
+   The waitlist page reuses this page's layout; only its counts and statuses differ. */
+
+.waitlist-stat--offered {
+  --tint: var(--warning-bg);
+  --tile: #fef3c7;
+  --ink: #d97706;
+}
+
+.waitlist-stat--expiring {
+  --tint: var(--error-bg);
+  --tile: #fee2e2;
+  --ink: #dc2626;
+}
+
+.waitlist-stat--accepted {
+  --tint: var(--success-bg);
+  --tile: #d1fae5;
+  --ink: #059669;
+}
+
+.waitlist-status--waiting {
+  border-color: var(--primary-subtle);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.waitlist-status--offered {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.waitlist-status--accepted {
+  border-color: var(--success-border);
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.waitlist-status--expired,
+.waitlist-status--declined,
+.waitlist-status--withdrawn {
+  border-color: var(--border-color);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
+/* An open offer is waiting on someone — the row stands out until it is answered. */
+.waitlist-row--offer td {
+  background: var(--warning-bg);
+}
+
+.waitlist-expiry {
+  color: var(--warning-text);
+  font-weight: 600;
+}
+
+.waitlist-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
