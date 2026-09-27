@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   leave: { approved: vi.fn() },
   doctor: { list: vi.fn() },
   booked: { list: vi.fn() },
+  waitlist: { list: vi.fn() },
 }));
 
 vi.mock('../api/appointments', async (importOriginal) => ({
@@ -19,6 +20,11 @@ vi.mock('../api/appointments', async (importOriginal) => ({
   leaveApi: api.leave,
   doctorApi: api.doctor,
   bookedApi: api.booked,
+}));
+
+vi.mock('../api/waitlist', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/waitlist')>()),
+  staffWaitlistApi: api.waitlist,
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -87,6 +93,7 @@ beforeEach(() => {
   api.slot.available.mockResolvedValue([]);
   api.leave.approved.mockResolvedValue([]);
   api.booked.list.mockResolvedValue([]);
+  api.waitlist.list.mockResolvedValue([]);
 });
 
 describe('AppointmentsPage doctor-leave labelling', () => {
@@ -309,5 +316,68 @@ describe('AppointmentsPage booked slots', () => {
     const cell = await screen.findByTestId('booked-slot');
     expect(cell).toHaveClass('slot-chip--flagged');
     expect(cell.getAttribute('title')).toContain('needs rescheduling');
+  });
+});
+
+describe('AppointmentsPage slots held for the waitlist (SCRUM-37)', () => {
+  /** An open offer of Wednesday's 09:00 (03:30Z), held until 14:30 (09:00Z). */
+  function offerOn(date: Date) {
+    return {
+      waitlistEntryId: 'w-1',
+      doctorId: DOCTOR_ID,
+      doctorName: 'Tathira Samarakoon',
+      specialization: 'Neurology',
+      slotDate: dateOnly(date),
+      placeInLine: null,
+      status: 'Offered',
+      joinedAtUtc: '2026-09-20T00:00:00Z',
+      offeredStartUtc: `${dateOnly(date)}T03:30:00Z`,
+      offeredEndUtc: `${dateOnly(date)}T04:00:00Z`,
+      offerExpiresAtUtc: `${dateOnly(date)}T09:00:00Z`,
+      appointmentId: null,
+      closedAtUtc: null,
+      closedReason: null,
+      patientId: 'patient-1',
+      patientNumber: 'PAT-000123',
+      patientName: 'Kamala Silva',
+      serviceCode: 'GEN-CONSULT',
+      position: 1,
+      offeredSlotId: 'slot-held',
+    };
+  }
+
+  it("asks for the open offers on the selected doctor's week", async () => {
+    render(<AppointmentsPage />);
+
+    await waitFor(() => expect(api.waitlist.list).toHaveBeenCalled());
+    expect(api.waitlist.list).toHaveBeenCalledWith({
+      doctorId: DOCTOR_ID,
+      from: dateOnly(dayOfWeek(0)),
+      to: dateOnly(dayOfWeek(6)),
+      status: 'Offered',
+    });
+  });
+
+  it('draws a held slot as Offered, naming the patient, instead of a blank cell', async () => {
+    // The availability listing leaves a held slot out, so without this the time would vanish.
+    api.waitlist.list.mockResolvedValue([offerOn(dayOfWeek(2))]);
+
+    render(<AppointmentsPage />);
+
+    const chip = await screen.findByTestId('offered-slot');
+    expect(chip).toHaveTextContent('Offered');
+    expect(chip).toHaveTextContent('Kamala Silva');
+    expect(chip).toHaveAttribute('title', expect.stringContaining('until 14:30'));
+    expect(screen.getByRole('rowheader', { name: '09:00' })).toBeInTheDocument();
+  });
+
+  it('still draws the week when the waitlist cannot be read', async () => {
+    api.slot.available.mockResolvedValue([slotAt(dayOfWeek(0))]);
+    api.waitlist.list.mockRejectedValue(new Error('offline'));
+
+    render(<AppointmentsPage />);
+
+    expect(await screen.findByRole('button', { name: 'Free' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

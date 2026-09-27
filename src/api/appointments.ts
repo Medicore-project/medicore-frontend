@@ -48,7 +48,8 @@ export const DAY_NAMES = [
   'Saturday',
 ] as const;
 
-export type SlotStatus = 'Available' | 'Booked' | 'Blocked' | 'Flagged';
+/** `Offered` is held for a waitlisted patient (SCRUM-37); the available listing never returns it. */
+export type SlotStatus = 'Available' | 'Booked' | 'Blocked' | 'Flagged' | 'Offered';
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export interface DoctorScheduleResponse {

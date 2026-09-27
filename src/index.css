@@ -3847,6 +3847,13 @@ details[open] .rx-history-summary::before {
   border-color: var(--error-border);
 }
 
+/* Held for a waitlisted patient (SCRUM-37): neither free nor booked yet. */
+.slot-chip--offered {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border-color: var(--warning-border);
+}
+
 @media (max-width: 768px) {
   .schedule-toolbar {
     flex-direction: column;
