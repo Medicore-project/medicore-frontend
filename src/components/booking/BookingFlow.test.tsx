@@ -7,6 +7,14 @@ const api = vi.hoisted(() => ({
     specializations: vi.fn(),
     doctors: vi.fn(),
     slots: vi.fn(),
+    days: vi.fn(),
+  },
+  waitlist: {
+    join: vi.fn(),
+    mine: vi.fn(),
+    accept: vi.fn(),
+    decline: vi.fn(),
+    leave: vi.fn(),
   },
   identity: {
     identify: vi.fn(),
@@ -31,6 +39,12 @@ vi.mock('../../api/booking', async (importOriginal) => ({
 
 vi.mock('../../api/bookingToken', () => ({
   clearBookingToken: api.clearBookingToken,
+}));
+
+vi.mock('../../api/waitlist', async (importOriginal) => ({
+  // Keep the real status constants and helpers.
+  ...(await importOriginal<typeof import('../../api/waitlist')>()),
+  waitlistApi: api.waitlist,
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -138,6 +152,8 @@ describe('BookingFlow (SCRUM-34)', () => {
     api.identity.publicRegister.mockResolvedValue({ ...IDENTITY, patientNumber: 'PAT-000456' });
     api.appointment.book.mockResolvedValue(APPOINTMENT);
     api.appointment.mine.mockResolvedValue([]);
+    api.publicBooking.days.mockResolvedValue([]);
+    api.waitlist.mine.mockResolvedValue([]);
   });
 
   // ── Identifying ─────────────────────────────────────────────────────────────
@@ -550,5 +566,259 @@ describe('BookingFlow (SCRUM-34)', () => {
     click('Continue');
 
     expect(await screen.findByText('No free times for this doctor')).toBeInTheDocument();
+  });
+});
+
+// ── SCRUM-37: the waitlist ──────────────────────────────────────────────────────
+
+/** The day after tomorrow, which the waitlist fixtures treat as fully booked. */
+function dayAfterTomorrow(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 2);
+  return date.toISOString().slice(0, 10);
+}
+
+function waitlistEntry(overrides: Record<string, unknown> = {}) {
+  return {
+    waitlistEntryId: 'w-1',
+    doctorId: 'doctor-1',
+    doctorName: 'Nimal Perera',
+    specialization: 'Neurology',
+    slotDate: dayAfterTomorrow(),
+    placeInLine: 2,
+    status: 'Waiting',
+    joinedAtUtc: '2026-09-20T00:00:00Z',
+    offeredStartUtc: null,
+    offeredEndUtc: null,
+    offerExpiresAtUtc: null,
+    appointmentId: null,
+    closedAtUtc: null,
+    closedReason: null,
+    ...overrides,
+  };
+}
+
+/** An offer of 09:00 (03:30Z) on the full day, held until 14:30 (09:00Z). */
+function openOffer() {
+  const day = dayAfterTomorrow();
+  return waitlistEntry({
+    status: 'Offered',
+    placeInLine: null,
+    offeredStartUtc: `${day}T03:30:00Z`,
+    offeredEndUtc: `${day}T04:00:00Z`,
+    offerExpiresAtUtc: `${day}T09:00:00Z`,
+  });
+}
+
+async function identify() {
+  type('Patient number', 'PAT-000123');
+  type('Date of birth', '1995-04-02');
+  click('Continue');
+}
+
+function fullChip() {
+  return screen
+    .getAllByTestId('date-option')
+    .find((chip) => chip.getAttribute('data-date') === dayAfterTomorrow())!;
+}
+
+describe('BookingFlow — the waitlist (SCRUM-37)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.publicBooking.specializations.mockResolvedValue(['Neurology']);
+    api.publicBooking.doctors.mockResolvedValue([DOCTOR]);
+    api.publicBooking.slots.mockResolvedValue([slot('slot-1', 3), slot('slot-2', 4)]);
+    api.publicBooking.days.mockResolvedValue([
+      { date: tomorrow(), isFull: false },
+      { date: dayAfterTomorrow(), isFull: true },
+    ]);
+    api.identity.identify.mockResolvedValue(IDENTITY);
+    api.appointment.mine.mockResolvedValue([]);
+    api.waitlist.mine.mockResolvedValue([]);
+    api.waitlist.join.mockResolvedValue(waitlistEntry({ placeInLine: 3 }));
+    api.waitlist.accept.mockResolvedValue(undefined);
+    api.waitlist.decline.mockResolvedValue(undefined);
+    api.waitlist.leave.mockResolvedValue(undefined);
+  });
+
+  it('marks a fully booked day Full and lets it be chosen, unlike a day off', async () => {
+    render(<BookingFlow />);
+    await identify();
+    await screen.findAllByTestId('slot-option');
+
+    const chip = fullChip();
+    expect(chip).toBeEnabled();
+    expect(chip).toHaveTextContent('Full');
+    expect(api.publicBooking.days).toHaveBeenCalledWith('doctor-1');
+    // Days with neither free times nor a full clinic stay greyed out.
+    expect(screen.getAllByTestId('date-option').filter((c) => c.hasAttribute('disabled')).length).toBeGreaterThan(0);
+  });
+
+  it('offers the waitlist in place of the times on a full day', async () => {
+    render(<BookingFlow />);
+    await identify();
+    await screen.findAllByTestId('slot-option');
+
+    fireEvent.click(fullChip());
+
+    const card = await screen.findByTestId('waitlist-join');
+    expect(card).toHaveTextContent('Nimal Perera has no free times left on');
+    expect(within(card).getByRole('button', { name: 'Join the waitlist' })).toBeInTheDocument();
+    expect(screen.queryAllByTestId('slot-option')).toHaveLength(0);
+  });
+
+  it('shows the dates and lands on a full day when the doctor has no free time at all', async () => {
+    api.publicBooking.slots.mockResolvedValue([]);
+    render(<BookingFlow />);
+    await identify();
+
+    expect(await screen.findByTestId('waitlist-join')).toBeInTheDocument();
+    expect(fullChip()).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('No free times for this doctor')).not.toBeInTheDocument();
+  });
+
+  it('joins with the booking flow and says where the patient stands', async () => {
+    render(<BookingFlow />);
+    await identify();
+    await screen.findAllByTestId('slot-option');
+    fireEvent.click(fullChip());
+    api.waitlist.mine.mockResolvedValue([waitlistEntry({ placeInLine: 3 })]);
+
+    click('Join the waitlist');
+
+    await waitFor(() =>
+      expect(api.waitlist.join).toHaveBeenCalledWith({
+        doctorId: 'doctor-1',
+        date: dayAfterTomorrow(),
+        serviceCode: 'GEN-CONSULT',
+      }),
+    );
+    const card = await screen.findByTestId('your-waitlist');
+    expect(within(card).getByRole('status')).toHaveTextContent('#3 in line');
+    expect(card).toHaveTextContent('Waiting — #3 in line');
+    // The join card now says so instead of offering to join again.
+    expect(await screen.findByTestId('waitlist-join')).toHaveTextContent('You are on the waitlist for this day');
+  });
+
+  it("shows the service's reason when joining is refused, and reloads the day", async () => {
+    render(<BookingFlow />);
+    await identify();
+    await screen.findAllByTestId('slot-option');
+    fireEvent.click(fullChip());
+    api.waitlist.join.mockImplementationOnce(() =>
+      rejectWith(409, 'That day still has a free time. Please book it instead.'),
+    );
+
+    click('Join the waitlist');
+
+    expect(await within(screen.getByTestId('waitlist-join')).findByRole('alert')).toHaveTextContent(
+      'Please book it instead.',
+    );
+    expect(api.publicBooking.slots).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows no waitlist card to a patient who is on no waitlist', async () => {
+    render(<BookingFlow />);
+    await identify();
+    await screen.findAllByTestId('slot-option');
+
+    expect(screen.queryByTestId('your-waitlist')).not.toBeInTheDocument();
+  });
+
+  it('still lets a patient book when their waitlist cannot be read', async () => {
+    api.waitlist.mine.mockImplementation(() => rejectWith(500));
+    render(<BookingFlow />);
+    await identify();
+
+    expect(await screen.findAllByTestId('slot-option')).not.toHaveLength(0);
+    expect(screen.queryByTestId('your-waitlist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows an open offer first, with the time and when it lapses', async () => {
+    api.waitlist.mine.mockResolvedValue([waitlistEntry({ waitlistEntryId: 'w-2', slotDate: tomorrow() }), openOffer()]);
+    render(<BookingFlow />);
+    await identify();
+
+    const card = await screen.findByTestId('your-waitlist');
+    const entries = within(card).getAllByTestId('waitlist-entry');
+    expect(entries[0]).toHaveTextContent('A time is held for you');
+    expect(entries[0]).toHaveTextContent('09:00');
+    expect(entries[0]).toHaveTextContent('Held until 14:30');
+    expect(entries[1]).toHaveTextContent('Waiting — #2 in line');
+  });
+
+  it('accepting books the time, then refreshes both lists and says so', async () => {
+    api.waitlist.mine.mockResolvedValue([openOffer()]);
+    render(<BookingFlow />);
+    await identify();
+    const card = await screen.findByTestId('your-waitlist');
+    api.waitlist.mine.mockResolvedValue([openOffer()].map((entry) => ({ ...entry, status: 'Accepted' })));
+    api.appointment.mine.mockResolvedValue([UPCOMING]);
+
+    fireEvent.click(within(card).getByRole('button', { name: /^Accept the time offered on/ }));
+
+    await waitFor(() => expect(api.waitlist.accept).toHaveBeenCalledWith('w-1'));
+    expect(await within(screen.getByTestId('your-waitlist')).findByRole('status')).toHaveTextContent(
+      /Booked: .* at 09:00\. It is now in your upcoming appointments\./,
+    );
+    await waitFor(() => expect(api.appointment.mine).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId('your-waitlist')).toHaveTextContent('Offer accepted');
+  });
+
+  it('shows why an accept was refused, such as an offer that has just expired', async () => {
+    api.waitlist.mine.mockResolvedValue([openOffer()]);
+    render(<BookingFlow />);
+    await identify();
+    const card = await screen.findByTestId('your-waitlist');
+    api.waitlist.accept.mockImplementationOnce(() =>
+      rejectWith(409, 'This offer expired at 14:30 on 25 Sep 2026 and has passed to the next patient.'),
+    );
+
+    fireEvent.click(within(card).getByRole('button', { name: /^Accept the time offered on/ }));
+
+    expect(await within(screen.getByTestId('your-waitlist')).findByRole('alert')).toHaveTextContent(
+      'has passed to the next patient',
+    );
+    expect(api.clearBookingToken).not.toHaveBeenCalled();
+  });
+
+  it('declining and leaving go to their own routes', async () => {
+    api.waitlist.mine.mockResolvedValue([openOffer(), waitlistEntry({ waitlistEntryId: 'w-2' })]);
+    render(<BookingFlow />);
+    await identify();
+    const card = await screen.findByTestId('your-waitlist');
+
+    fireEvent.click(within(card).getByRole('button', { name: /^Decline the time offered on/ }));
+    await waitFor(() => expect(api.waitlist.decline).toHaveBeenCalledWith('w-1'));
+
+    fireEvent.click(within(screen.getByTestId('your-waitlist')).getByRole('button', { name: /^Leave the waitlist for/ }));
+    await waitFor(() => expect(api.waitlist.leave).toHaveBeenCalledWith('w-2'));
+  });
+
+  it('tells the patient when an offer lapsed, until the day has passed', async () => {
+    api.waitlist.mine.mockResolvedValue([
+      waitlistEntry({ status: 'Expired', placeInLine: null, closedAtUtc: '2026-09-21T00:00:00Z' }),
+    ]);
+    render(<BookingFlow />);
+    await identify();
+
+    const card = await screen.findByTestId('your-waitlist');
+    expect(card).toHaveTextContent('The offer expired and passed to the next patient.');
+    expect(within(card).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('sends the patient back to identify when the session expires mid-answer', async () => {
+    api.waitlist.mine.mockResolvedValue([openOffer()]);
+    render(<BookingFlow />);
+    await identify();
+    const card = await screen.findByTestId('your-waitlist');
+    api.waitlist.accept.mockImplementationOnce(() => rejectWith(401));
+
+    fireEvent.click(within(card).getByRole('button', { name: /^Accept the time offered on/ }));
+
+    expect(await screen.findByTestId('booking-identify-form')).toBeInTheDocument();
+    expect(screen.queryByTestId('your-waitlist')).not.toBeInTheDocument();
+    expect(api.clearBookingToken).toHaveBeenCalled();
   });
 });

@@ -886,6 +886,88 @@
   margin: 0 0 10px;
 }
 
+/* ── The waitlist (SCRUM-37) ── */
+
+/* A fully booked day: choosable, marked Full, in the warning palette. */
+.bk-date--full {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+}
+
+.bk-date--full:hover:not(.bk-date--selected) {
+  border-color: var(--warning-text);
+}
+
+.bk-date-full {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--warning-text);
+}
+
+.bk-date--selected .bk-date-full {
+  color: #ffffff;
+}
+
+/* Shown in place of the times on a full day. */
+.bk-waitlist-join {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
+.bk-waitlist-join .bk-section-title {
+  margin: 0;
+}
+
+.bk-waitlist-join-lead,
+.bk-waitlist-join-status {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.bk-waitlist-join .alert {
+  align-self: stretch;
+  margin: 0;
+}
+
+/* Your waitlist, beside your upcoming appointments. */
+.booking-waitlist-offer {
+  padding: 12px;
+  border: 1.5px solid var(--warning-border);
+  border-radius: 10px;
+  background: var(--warning-bg);
+}
+
+.booking-waitlist-tag {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--warning-text);
+}
+
+.booking-waitlist-expiry,
+.booking-waitlist-state {
+  flex-basis: 100%;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.booking-waitlist-offer .booking-waitlist-expiry {
+  font-weight: 600;
+  color: var(--warning-text);
+}
+
+.booking-waitlist-closed {
+  opacity: 0.7;
+}
+
 /* ── Narrower screens ── */
 
 @media (max-width: 1080px) {

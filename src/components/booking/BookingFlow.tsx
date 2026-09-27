@@ -15,6 +15,8 @@ import type {
   PublicSlot,
 } from '../../api/booking';
 import { clearBookingToken } from '../../api/bookingToken';
+import { isActiveWaitlistStatus, waitlistApi } from '../../api/waitlist';
+import type { PatientWaitlistEntry } from '../../api/waitlist';
 import { extractErrorMessage } from '../../utils/apiError';
 import { fullDateLabel } from '../../utils/bookingLabels';
 import {
@@ -35,6 +37,8 @@ import IdentifyStep from './IdentifyStep';
 import RegisterStep from './RegisterStep';
 import SlotPicker from './SlotPicker';
 import UpcomingAppointments from './UpcomingAppointments';
+import WaitlistJoinCard from './WaitlistJoinCard';
+import YourWaitlist from './YourWaitlist';
 
 /** What the service records when nothing else is chosen. Mirrors ServiceCodes.GeneralConsultation. */
 const DEFAULT_SERVICE_CODE = 'GEN-CONSULT';
@@ -98,12 +102,25 @@ const BookingFlow: React.FC = () => {
   const [isLoadingDoctors, setIsLoadingDoctors] = useState(false);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
+  // The chosen doctor's fully booked days (SCRUM-37), which can be chosen to join the waitlist.
+  // Empty when they cannot be read: the page then behaves exactly as it did before the waitlist.
+  const [fullDates, setFullDates] = useState<string[]>([]);
+
   // The identified patient's own upcoming bookings. Null until loaded, and left null when loading
   // fails — seeing past bookings is a convenience and must never stand between a patient and a
   // new one, so a failure here shows nothing rather than an error.
   const [upcoming, setUpcoming] = useState<PatientAppointment[] | null>(null);
   const [upcomingChange, setUpcomingChange] = useState<UpcomingChange | null>(null);
   const [upcomingNotice, setUpcomingNotice] = useState<string | null>(null);
+
+  // The identified patient's waitlist (SCRUM-37). Like the upcoming list, a convenience: null when
+  // it cannot be read, and never an error that stands in the way of booking.
+  const [waitlist, setWaitlist] = useState<PatientWaitlistEntry[] | null>(null);
+  const [waitlistNotice, setWaitlistNotice] = useState<string | null>(null);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [busyWaitlistId, setBusyWaitlistId] = useState<string | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
 
   const selectedDoctor = doctors.find((candidate) => candidate.doctorId === doctorId) ?? null;
 
@@ -129,26 +146,36 @@ const BookingFlow: React.FC = () => {
   }, []);
 
   /**
-   * Loads a doctor's free times and lands on a date that has some — the one already chosen if it
-   * still does, otherwise the first. Any chosen time is dropped: after a reload it may be gone.
+   * Loads a doctor's free times, and which of their days are full, and lands on a date — the one
+   * already chosen if it still has free times or is still full, otherwise the first with free
+   * times, otherwise the first full one. Any chosen time is dropped: after a reload it may be gone.
    */
   const loadSlots = useCallback(async (wantedDoctorId: string, keepDate: string | null = null) => {
     setSelectedSlot(null);
     if (!wantedDoctorId) {
       setSlots([]);
+      setFullDates([]);
       setSelectedDate(null);
       return;
     }
 
     setIsLoadingSlots(true);
     try {
-      const result = await publicBookingApi.slots(wantedDoctorId);
+      const [result, days] = await Promise.all([
+        publicBookingApi.slots(wantedDoctorId),
+        // A missing days list only hides the waitlist; the free times still show.
+        publicBookingApi.days(wantedDoctorId).catch(() => []),
+      ]);
+      const full = days.filter((day) => day.isFull).map((day) => day.date);
       setSlots(result);
-      const stillFree = keepDate !== null && result.some((slot) => slot.slotDate === keepDate);
-      setSelectedDate(stillFree ? keepDate : (result[0]?.slotDate ?? null));
+      setFullDates(full);
+      const stillThere =
+        keepDate !== null && (result.some((slot) => slot.slotDate === keepDate) || full.includes(keepDate));
+      setSelectedDate(stillThere ? keepDate : (result[0]?.slotDate ?? full[0] ?? null));
     } catch (err) {
       setStepError(extractErrorMessage(err, 'Could not load available times.'));
       setSlots([]);
+      setFullDates([]);
       setSelectedDate(null);
     } finally {
       setIsLoadingSlots(false);
@@ -182,12 +209,20 @@ const BookingFlow: React.FC = () => {
     }
   }, []);
 
+  const loadWaitlist = useCallback(async () => {
+    try {
+      setWaitlist(await waitlistApi.mine());
+    } catch {
+      setWaitlist(null);
+    }
+  }, []);
+
   /** Everything that has to happen once we know who the patient is. */
   const goToChoosing = useCallback(async () => {
     setStep({ kind: 'choose' });
-    const [found] = await Promise.all([loadDoctors(specialization), loadUpcoming()]);
+    const [found] = await Promise.all([loadDoctors(specialization), loadUpcoming(), loadWaitlist()]);
     if (found.length === 1) await loadSlots(found[0].doctorId);
-  }, [loadDoctors, loadSlots, loadUpcoming, specialization]);
+  }, [loadDoctors, loadSlots, loadUpcoming, loadWaitlist, specialization]);
 
   // ── Identify / register ─────────────────────────────────────────────────────
 
@@ -266,9 +301,18 @@ const BookingFlow: React.FC = () => {
     setIdentity(null);
     setUpcoming(null);
     setUpcomingNotice(null);
+    clearWaitlist();
     setSelectedSlot(null);
     setStepError(null);
     setStep({ kind: 'identify' });
+  };
+
+  /** The waitlist belongs to whoever identified; it goes when they do. */
+  const clearWaitlist = () => {
+    setWaitlist(null);
+    setWaitlistNotice(null);
+    setWaitlistError(null);
+    setJoinError(null);
   };
 
   /**
@@ -281,6 +325,7 @@ const BookingFlow: React.FC = () => {
     setUpcoming(null);
     setUpcomingChange(null);
     setUpcomingNotice(null);
+    clearWaitlist();
     setSelectedSlot(null);
     setStep({ kind: 'identify' });
     setStepError('Your booking session expired. Please identify yourself again.');
@@ -291,6 +336,7 @@ const BookingFlow: React.FC = () => {
   const handleSpecializationChange = async (value: string) => {
     setSpecialization(value);
     setStepError(null);
+    setJoinError(null);
     const found = await loadDoctors(value);
     if (found.length === 1) await loadSlots(found[0].doctorId);
   };
@@ -298,12 +344,14 @@ const BookingFlow: React.FC = () => {
   const handleDoctorChange = async (value: string) => {
     setDoctorId(value);
     setStepError(null);
+    setJoinError(null);
     await loadSlots(value);
   };
 
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
     setSelectedSlot(null);
+    setJoinError(null);
   };
 
   const handlePickSlot = (slot: PublicSlot) => {
@@ -369,6 +417,82 @@ const BookingFlow: React.FC = () => {
     // grid is open beside the list, show it as it now is.
     if (doctorId && doctorId === appointment.doctorId) await loadSlots(doctorId, selectedDate);
   };
+
+  // ── The waitlist (SCRUM-37) ─────────────────────────────────────────────────
+
+  /** Joins the chosen doctor's waitlist for a full day, then shows where the patient stands. */
+  const joinWaitlist = async (date: string) => {
+    if (!doctorId) return;
+
+    setIsJoining(true);
+    setJoinError(null);
+    setWaitlistNotice(null);
+    try {
+      const entry = await waitlistApi.join({ doctorId, date, serviceCode: DEFAULT_SERVICE_CODE });
+      setWaitlistNotice(
+        entry.placeInLine
+          ? `You joined the waitlist for ${fullDateLabel(date)} — #${entry.placeInLine} in line.`
+          : `You joined the waitlist for ${fullDateLabel(date)}.`,
+      );
+      await loadWaitlist();
+    } catch (err) {
+      if (isBookingSessionExpiredError(err)) {
+        expireSession();
+        return;
+      }
+      // The service words every refusal: the day is no longer full (book instead), already
+      // waiting, already booked that day, too many waitlists. A day that freed up shows its times.
+      setJoinError(extractErrorMessage(err, 'Could not join the waitlist. Please try again.'));
+      await loadSlots(doctorId, date);
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  /**
+   * Runs one answer to a waitlist entry. A refusal — most often an offer that has just expired —
+   * is shown on the card in the service's words, and the list is reloaded so it shows what is true
+   * now. An accepted offer is an appointment, so the upcoming list is reloaded too.
+   */
+  const answerWaitlist = async (
+    entry: PatientWaitlistEntry,
+    answer: () => Promise<void>,
+    notice: string,
+    booked = false,
+  ) => {
+    setBusyWaitlistId(entry.waitlistEntryId);
+    setWaitlistNotice(null);
+    setWaitlistError(null);
+    try {
+      await answer();
+      setWaitlistNotice(notice);
+      if (booked) await loadUpcoming();
+    } catch (err) {
+      if (isBookingSessionExpiredError(err)) {
+        expireSession();
+        return;
+      }
+      setWaitlistError(extractErrorMessage(err, 'That did not work. Please try again.'));
+    } finally {
+      setBusyWaitlistId(null);
+    }
+
+    await loadWaitlist();
+    // The answer freed or took one of this doctor's times; if their grid is open, show it as it is.
+    if (doctorId && doctorId === entry.doctorId) await loadSlots(doctorId, selectedDate);
+  };
+
+  const offeredLabel = (entry: PatientWaitlistEntry) =>
+    entry.offeredStartUtc
+      ? `${fullDateLabel(entry.slotDate)} at ${colomboTimeLabel(entry.offeredStartUtc)}`
+      : fullDateLabel(entry.slotDate);
+
+  /** The patient's active entry for the chosen doctor's day, if any. */
+  const activeEntryFor = (date: string) =>
+    waitlist?.find(
+      (entry) =>
+        entry.doctorId === doctorId && entry.slotDate === date && isActiveWaitlistStatus(entry.status),
+    ) ?? null;
 
   const bookAnother = async () => {
     setStepError(null);
@@ -440,6 +564,21 @@ const BookingFlow: React.FC = () => {
               onDoctorChange={handleDoctorChange}
               onSelectDate={handleSelectDate}
               onPickSlot={handlePickSlot}
+              fullDates={identity ? fullDates : undefined}
+              renderFullDay={
+                identity && selectedDoctor
+                  ? (date) => (
+                      <WaitlistJoinCard
+                        date={date}
+                        doctorName={selectedDoctor.fullName}
+                        entry={activeEntryFor(date)}
+                        isJoining={isJoining}
+                        error={joinError}
+                        onJoin={() => void joinWaitlist(date)}
+                      />
+                    )
+                  : undefined
+              }
             />
           )}
 
@@ -487,6 +626,36 @@ const BookingFlow: React.FC = () => {
                 setUpcomingNotice(null);
                 setUpcomingChange({ kind: 'cancel', appointment });
               }}
+            />
+          )}
+          {identity && waitlist && (step.kind === 'choose' || step.kind === 'booked') && (
+            <YourWaitlist
+              entries={waitlist}
+              notice={waitlistNotice}
+              error={waitlistError}
+              busyEntryId={busyWaitlistId}
+              onAccept={(entry) =>
+                void answerWaitlist(
+                  entry,
+                  () => waitlistApi.accept(entry.waitlistEntryId),
+                  `Booked: ${offeredLabel(entry)}. It is now in your upcoming appointments.`,
+                  true,
+                )
+              }
+              onDecline={(entry) =>
+                void answerWaitlist(
+                  entry,
+                  () => waitlistApi.decline(entry.waitlistEntryId),
+                  'You declined the offered time. It has gone to the next patient.',
+                )
+              }
+              onLeave={(entry) =>
+                void answerWaitlist(
+                  entry,
+                  () => waitlistApi.leave(entry.waitlistEntryId),
+                  `You left the waitlist for ${fullDateLabel(entry.slotDate)}.`,
+                )
+              }
             />
           )}
         </aside>
