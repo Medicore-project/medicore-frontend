@@ -3998,3 +3998,61 @@ details[open] .rx-history-summary::before {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Doctor utilisation report (SCRUM-38) ─────────────────────────────────────
+   Built on the demographics report's layout classes; only what differs is here. */
+
+/* Five summary figures rather than four. */
+.utilisation-kpi-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+/* Height is set inline: one bar per doctor. */
+.utilisation-chart {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.utilisation-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.utilisation-muted {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.utilisation-doctor {
+  font-weight: 600;
+}
+
+/* Under the doctor's name rather than a column of its own, so the rates stay in view. */
+.utilisation-specialization {
+  display: block;
+}
+
+.utilisation-legend-label {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+/* Fill at or above 90%: a label, not colour alone. */
+.badge-high-demand {
+  margin-left: 8px;
+  background-color: #fff7ed;
+  color: #9a3412;
+  border-color: #fdba74;
+}
+
+@media (max-width: 1080px) {
+  .utilisation-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .utilisation-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

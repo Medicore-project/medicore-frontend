@@ -37,6 +37,7 @@ const navItems: Array<{
   { name: 'Doctor Leave', path: '/appointments/leave', allowedRoles: LEAVE_READER_ROLES },
   { name: 'Audit Reports', path: '/reports/audit', allowedRoles: ['Admin'] },
   { name: 'Demographics Report', path: '/reports/demographics', allowedRoles: ['Admin'] },
+  { name: 'Utilisation Report', path: '/reports/utilisation', allowedRoles: ['Admin'] },
 ];
 
 export const Sidebar: React.FC = () => {
