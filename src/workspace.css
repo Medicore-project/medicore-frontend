@@ -1,0 +1,740 @@
+/* ==========================================================================
+   Staff workspace shell — sidebar, header, quick jump (Ctrl K), account menu
+   (components/layout/*). Prefix: ws-  ·  Keyframes (mc-*) live in motion.css.
+   ========================================================================== */
+
+.app-shell {
+  --ws-sidebar-w: 268px;
+  --ws-sidebar-collapsed-w: 84px;
+  --ws-header-h: 72px;
+  --ws-navy: #0a1430;
+  --ws-line: #e3eaf5;
+
+  display: flex;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(59, 130, 246, 0.1), transparent 30rem),
+    radial-gradient(circle at 40% 100%, rgba(14, 165, 233, 0.06), transparent 26rem),
+    #f4f7fc;
+}
+
+.main-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+.content-area {
+  flex: 1;
+  padding: clamp(18px, 3vw, 34px);
+  background: transparent;
+}
+
+.ws-icon { width: 20px; height: 20px; flex: 0 0 auto; }
+.ws-icon-sm { width: 17px; height: 17px; flex: 0 0 auto; }
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────── */
+
+.ws-sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  width: var(--ws-sidebar-w);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  color: #9aa8c7;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(59, 130, 246, 0.35), transparent 16rem),
+    radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.12), transparent 14rem),
+    linear-gradient(180deg, #0b1633 0%, #0a1430 60%, #081026 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  transition: width 0.35s var(--ease-out-expo), transform 0.35s var(--ease-out-expo);
+}
+
+.ws-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--ws-header-h);
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+
+.ws-brand-tile {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  color: #ffffff;
+  background: linear-gradient(140deg, #60a5fa 0%, #1856f3 60%, #1144d4 100%);
+  box-shadow: 0 10px 22px -8px rgba(59, 130, 246, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.5s var(--ease-spring);
+}
+
+.ws-sidebar-brand:hover .ws-brand-tile { transform: rotate(90deg); }
+
+.ws-brand-plus { width: 22px; height: 22px; stroke-width: 3.2; }
+
+.ws-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+
+.ws-brand-text strong {
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.ws-brand-text span {
+  color: #7f8fb3;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ws-sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.ws-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ws-nav-heading {
+  padding: 0 12px 6px;
+  color: #5d6d92;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+
+.ws-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  color: #a9b6d3;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.ws-nav-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  transition: transform 0.35s var(--ease-spring), background-color 0.25s ease, color 0.25s ease;
+}
+
+.ws-nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.2s ease;
+}
+
+.ws-nav-link:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ws-nav-link:hover .ws-nav-icon { transform: translateX(2px) scale(1.06); }
+
+.ws-nav-link.active {
+  color: #ffffff;
+  background: linear-gradient(90deg, rgba(24, 86, 243, 0.34), rgba(24, 86, 243, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.22);
+}
+
+.ws-nav-link.active .ws-nav-icon {
+  color: #ffffff;
+  background: linear-gradient(140deg, #3b82f6, #1856f3);
+  box-shadow: 0 8px 18px -8px rgba(59, 130, 246, 0.9);
+}
+
+/* The marker slides in on the left edge of the active page. */
+.ws-nav-link::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 4px;
+  height: 22px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #60a5fa, #1856f3);
+  transform: translateY(-50%) scaleY(0);
+  transition: transform 0.35s var(--ease-spring);
+}
+
+.ws-nav-link.active::before { transform: translateY(-50%) scaleY(1); }
+
+.ws-nav-link:focus-visible,
+.ws-collapse-btn:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.ws-sidebar-footer {
+  padding: 12px 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ws-collapse-btn {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 19px;
+  border: 0;
+  border-radius: 12px;
+  color: #7f8fb3;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.ws-collapse-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.06); }
+.ws-collapse-btn svg { transition: transform 0.35s var(--ease-out-expo); }
+
+/* Collapsed: an icon rail. Labels are hidden visually but stay in the DOM, so every link keeps its
+   accessible name; the tooltip shows it on hover. */
+.ws-sidebar.is-collapsed { width: var(--ws-sidebar-collapsed-w); }
+.ws-sidebar.is-collapsed .ws-sidebar-brand { padding: 0 22px; }
+
+.ws-sidebar.is-collapsed .ws-brand-text,
+.ws-sidebar.is-collapsed .ws-nav-label,
+.ws-sidebar.is-collapsed .ws-nav-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  opacity: 0;
+}
+
+.ws-sidebar.is-collapsed .ws-nav-section { gap: 4px; }
+.ws-sidebar.is-collapsed .ws-nav-section + .ws-nav-section {
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ws-sidebar.is-collapsed .ws-nav-link { justify-content: center; padding: 0; }
+.ws-sidebar.is-collapsed .ws-collapse-btn { justify-content: center; padding: 0; }
+.ws-sidebar.is-collapsed .ws-collapse-btn svg { transform: rotate(180deg); }
+
+.ws-sidebar.is-collapsed .ws-nav-link::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  z-index: 40;
+  padding: 7px 11px;
+  border-radius: 9px;
+  color: #ffffff;
+  background: #0f1b3d;
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.6);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-6px, -50%);
+  transition: opacity 0.18s ease, transform 0.25s var(--ease-out-expo);
+}
+
+.ws-sidebar.is-collapsed .ws-nav-link:hover::after,
+.ws-sidebar.is-collapsed .ws-nav-link:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+.ws-scrim { display: none; }
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+
+.ws-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--ws-header-h);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 clamp(16px, 3vw, 34px);
+  border-bottom: 1px solid rgba(203, 213, 225, 0.6);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: saturate(160%) blur(16px);
+}
+
+.ws-icon-btn {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--ws-line);
+  border-radius: 12px;
+  color: #0f172a;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.ws-header-menu { display: none; }
+
+.ws-header-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin-right: auto;
+}
+
+.ws-header-section {
+  color: #7a8aa8;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ws-header-page {
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: mc-rise 0.45s var(--ease-out-expo);
+}
+
+.ws-search-trigger {
+  width: min(320px, 30vw);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 14px;
+  border: 1px solid var(--ws-line);
+  border-radius: 12px;
+  color: #7a8aa8;
+  background: #f7f9fd;
+  font-family: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, background-color 0.2s ease;
+}
+
+.ws-search-trigger:hover {
+  border-color: #b9cbef;
+  background: #ffffff;
+  box-shadow: 0 10px 22px -16px rgba(24, 86, 243, 0.6);
+}
+
+.ws-search-label { flex: 1; text-align: left; }
+
+.ws-header kbd,
+.ws-palette kbd,
+.db-section-head kbd {
+  padding: 2px 7px;
+  border: 1px solid #dbe3f0;
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  color: #53627f;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.ws-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  min-height: 42px;
+  border-radius: 12px;
+  color: #334155;
+  background: #eef4ff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ws-clock svg { color: var(--primary); }
+
+/* ── Account menu ──────────────────────────────────────────────────────────── */
+
+.ws-user { position: relative; }
+
+.ws-user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid var(--ws-line);
+  border-radius: 14px;
+  background: #ffffff;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease;
+}
+
+.ws-user-trigger:hover,
+.ws-user-trigger.is-open {
+  border-color: #b9cbef;
+  box-shadow: 0 10px 22px -16px rgba(24, 86, 243, 0.6);
+}
+
+.ws-avatar {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #3b82f6, #1856f3);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.ws-avatar--lg { width: 44px; height: 44px; border-radius: 13px; font-size: 0.86rem; }
+
+.ws-user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 160px;
+  line-height: 1.2;
+}
+
+.ws-user-text strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-user-text span {
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.ws-user-caret {
+  color: #7a8aa8;
+  transition: transform 0.3s var(--ease-out-expo);
+}
+
+.ws-user-trigger.is-open .ws-user-caret { transform: rotate(180deg); }
+
+.ws-user-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 50;
+  width: 270px;
+  padding: 8px;
+  border: 1px solid var(--ws-line);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 30px 60px -30px rgba(15, 23, 42, 0.45);
+  transform-origin: top right;
+  animation: ws-pop 0.25s var(--ease-out-expo);
+}
+
+@keyframes ws-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.ws-user-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  padding: 10px 10px 14px;
+  border-bottom: 1px solid #eef2f8;
+}
+
+.ws-user-menu-head > span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.ws-user-menu-head strong { color: #0f172a; font-size: 0.9rem; }
+
+.ws-user-menu-head span > span:not(.ws-role-pill) {
+  max-width: 180px;
+  overflow: hidden;
+  color: #7a8aa8;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+}
+
+.ws-role-pill {
+  margin-top: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: var(--primary);
+  background: #eef4ff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ws-user-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  color: #334155;
+  background: none;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ws-user-menu-item:hover { color: var(--primary); background: #f2f6ff; }
+.ws-user-menu-item--danger:hover { color: #dc2626; background: #fef2f2; }
+
+/* ── Quick jump (Ctrl K) ───────────────────────────────────────────────────── */
+
+.ws-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: rgba(8, 16, 38, 0.45);
+  backdrop-filter: blur(4px);
+  animation: mc-fade 0.2s ease;
+}
+
+.ws-palette {
+  width: min(620px, 100%);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 40px 90px -30px rgba(8, 16, 38, 0.65);
+  animation: ws-pop 0.3s var(--ease-out-expo);
+}
+
+.ws-palette-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef2f8;
+  color: #7a8aa8;
+}
+
+.ws-palette-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  color: #0f172a;
+  background: none;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.ws-palette-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  list-style: none;
+}
+
+.ws-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  animation: mc-rise 0.35s var(--ease-out-expo) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * 18ms);
+}
+
+.ws-palette-item.is-active { background: #f0f5ff; }
+
+.ws-palette-icon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  color: var(--primary);
+  background: #eef4ff;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ws-palette-item.is-active .ws-palette-icon { color: #ffffff; background: var(--primary); }
+
+.ws-palette-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-palette-text strong { color: #0f172a; font-size: 0.9rem; }
+
+.ws-palette-text span {
+  overflow: hidden;
+  color: #7a8aa8;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-palette-go {
+  color: var(--primary);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.2s ease, transform 0.25s var(--ease-out-expo);
+}
+
+.ws-palette-item.is-active .ws-palette-go { opacity: 1; transform: none; }
+
+.ws-palette-empty {
+  padding: 28px 12px;
+  color: #7a8aa8;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.ws-palette-footer {
+  display: flex;
+  gap: 18px;
+  padding: 10px 18px;
+  border-top: 1px solid #eef2f8;
+  color: #94a3b8;
+  background: #fafbfe;
+  font-size: 0.74rem;
+}
+
+.ws-palette-footer kbd { margin-right: 3px; }
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1180px) {
+  .ws-clock { display: none; }
+}
+
+@media (max-width: 900px) {
+  /* The sidebar becomes a drawer: always full width, slid in over a scrim. */
+  .ws-sidebar,
+  .ws-sidebar.is-collapsed {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(290px, 86vw);
+    transform: translateX(-102%);
+    box-shadow: 30px 0 60px -30px rgba(0, 0, 0, 0.6);
+  }
+
+  .ws-sidebar.is-open { transform: none; }
+
+  .ws-sidebar.is-collapsed .ws-brand-text,
+  .ws-sidebar.is-collapsed .ws-nav-label,
+  .ws-sidebar.is-collapsed .ws-nav-heading {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    opacity: 1;
+  }
+
+  .ws-sidebar.is-collapsed .ws-nav-link { justify-content: flex-start; padding: 0 12px; }
+  .ws-sidebar.is-collapsed .ws-nav-link::after { display: none; }
+  .ws-sidebar-footer { display: none; }
+
+  .ws-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: block;
+    background: rgba(8, 16, 38, 0.45);
+    backdrop-filter: blur(2px);
+    animation: mc-fade 0.25s ease;
+  }
+
+  .ws-header-menu { display: inline-flex; }
+  .ws-search-trigger { width: 42px; padding: 0; justify-content: center; }
+  .ws-search-label,
+  .ws-search-trigger kbd { display: none; }
+}
+
+@media (max-width: 560px) {
+  .ws-user-text,
+  .ws-user-caret { display: none; }
+  .ws-user-trigger { padding: 4px; }
+  .ws-header { gap: 10px; }
+}
