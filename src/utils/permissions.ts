@@ -62,6 +62,18 @@ export function canCompleteAppointment(
 }
 
 /**
+ * Whether this user may mark this appointment a no-show (SCRUM-38). Mirrors the NoShowRecorder
+ * policy plus the service's ownership check: the front desk for any appointment, a doctor only for
+ * their own. Nurse never. A doctor with no staff id never matches.
+ */
+export function canMarkNoShow(
+  user: { role?: string; staffId?: string | null } | null | undefined,
+  doctorId: string,
+): boolean {
+  return canChangeAppointments(user?.role) || canCompleteAppointment(user, doctorId);
+}
+
+/**
  * Mirrors the appointment service's LeaveManager policy — submit and withdraw leave requests.
  * Doctor-only: the service additionally checks the caller's own staffId against the request's
  * DoctorId, so this only ever lets someone act on their own leave, never on another doctor's

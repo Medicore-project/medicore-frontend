@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppointmentHistoryEntry, AppointmentRecord } from '../api/appointments';
 import AppointmentDetailPage from './AppointmentDetailPage';
 
@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
     reschedule: vi.fn(),
     cancel: vi.fn(),
     complete: vi.fn(),
+    markNoShow: vi.fn(),
   },
   doctor: { list: vi.fn() },
   slot: { available: vi.fn() },
@@ -184,12 +185,16 @@ describe('AppointmentDetailPage (SCRUM-36)', () => {
     expect(screen.queryByRole('button', { name: 'Complete visit' })).not.toBeInTheDocument();
   });
 
-  it.each(['Cancelled', 'Completed', 'NoShow'])('offers nothing once the appointment is %s', async (status) => {
+  it.each([
+    ['Cancelled', 'Cancelled'],
+    ['Completed', 'Completed'],
+    ['NoShow', 'No-show'],
+  ])('offers nothing once the appointment is %s', async (status, label) => {
     api.change.get.mockResolvedValue(appointment({ status }));
     signInAs('Admin');
     renderPage();
 
-    expect(await screen.findByTestId('appointment-status')).toHaveTextContent(status);
+    expect(await screen.findByTestId('appointment-status')).toHaveTextContent(label);
     expect(screen.queryByRole('button', { name: 'Reschedule' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel appointment' })).not.toBeInTheDocument();
   });
@@ -316,5 +321,116 @@ describe('AppointmentDetailPage (SCRUM-36)', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Complete visit' }));
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('cannot be completed before then');
+  });
+});
+
+describe('AppointmentDetailPage: no-show (SCRUM-38)', () => {
+  /** The appointment ran 09:00-09:30 Colombo on 5 Oct (03:30-04:00Z); the clock says 04:00Z. */
+  const AT_END = new Date('2026-10-05T04:00:00Z');
+
+  const NO_SHOW_ENTRY: AppointmentHistoryEntry = {
+    ...BOOKED_ENTRY,
+    action: 'NoShow',
+    fromStatus: 'Booked',
+    toStatus: 'NoShow',
+    fromSlotId: 'slot-1',
+    toSlotId: null,
+    fromStartUtc: '2026-10-05T03:30:00Z',
+    toStartUtc: null,
+    occurredAtUtc: '2026-10-05T04:00:00Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Only Date: the page reads the clock once, while findBy/waitFor still need real timers.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(AT_END);
+    signInAs('Receptionist');
+    api.change.get.mockResolvedValue(appointment());
+    api.change.history.mockResolvedValue([BOOKED_ENTRY]);
+    api.doctor.list.mockResolvedValue([DOCTOR]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    ['Receptionist', null],
+    ['Admin', null],
+    ['Doctor', 'doctor-1'],
+  ])('offers %s a no-show once the appointment has ended', async (role, staffId) => {
+    signInAs(role, staffId);
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Mark no-show' })).toBeInTheDocument();
+  });
+
+  it('does not offer it a minute before the end, when the patient may still arrive', async () => {
+    vi.setSystemTime(new Date('2026-10-05T03:59:00Z'));
+    renderPage();
+    await screen.findByTestId('appointment-status');
+
+    expect(screen.queryByRole('button', { name: 'Mark no-show' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['Doctor', 'doctor-2'],
+    ['Doctor', null],
+    ['Nurse', null],
+  ])('does not offer it to %s (staff id %s)', async (role, staffId) => {
+    signInAs(role, staffId);
+    renderPage();
+    await screen.findByTestId('appointment-status');
+
+    expect(screen.queryByRole('button', { name: 'Mark no-show' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer it once the appointment is no longer booked', async () => {
+    api.change.get.mockResolvedValue(appointment({ status: 'Completed' }));
+    renderPage();
+    await screen.findByTestId('appointment-status');
+
+    expect(screen.queryByRole('button', { name: 'Mark no-show' })).not.toBeInTheDocument();
+  });
+
+  it('marks a no-show after confirming, then shows the new status and history', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    api.change.markNoShow.mockResolvedValue(appointment({ status: 'NoShow' }));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark no-show' }));
+
+    api.change.history.mockResolvedValue([BOOKED_ENTRY, NO_SHOW_ENTRY]);
+    expect(await screen.findByRole('status')).toHaveTextContent('Recorded as a no-show.');
+    expect(confirm).toHaveBeenCalledWith(
+      "Mark Kamala Silva's appointment on Mon, 5 Oct 2026, 09:00 as a no-show? This cannot be undone.",
+    );
+    expect(api.change.markNoShow).toHaveBeenCalledWith('appt-1');
+    expect(screen.getByTestId('appointment-status')).toHaveTextContent('No-show');
+    expect(await screen.findByText('Marked a no-show')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mark no-show' })).not.toBeInTheDocument();
+  });
+
+  it('does nothing when the confirmation is declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark no-show' }));
+
+    expect(api.change.markNoShow).not.toHaveBeenCalled();
+    expect(screen.getByTestId('appointment-status')).toHaveTextContent('Booked');
+  });
+
+  it("shows the service's refusal and leaves the appointment as it was", async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    api.change.markNoShow.mockRejectedValue(
+      problem(409, 'This appointment is Completed and can no longer be marked a no-show.'),
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark no-show' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('can no longer be marked a no-show');
+    expect(screen.getByTestId('appointment-status')).toHaveTextContent('Booked');
+    expect(screen.getByRole('button', { name: 'Mark no-show' })).toBeEnabled();
   });
 });

@@ -135,7 +135,7 @@ export type AppointmentRecord = Omit<AppointmentSummary, 'doctorName' | 'special
 
 /** One change in an appointment's history, oldest first. */
 export interface AppointmentHistoryEntry {
-  /** `Booked`, `Rescheduled`, `Cancelled` or `Completed`. */
+  /** `Booked`, `Rescheduled`, `Cancelled`, `Completed` or `NoShow`. */
   action: string;
   /** Null for the booking that created the appointment. */
   fromStatus: string | null;
@@ -383,6 +383,17 @@ export const appointmentChangeApi = {
     const response = await apiClient.put<AppointmentRecord>(
       `${appointmentsPath}/${appointmentId}/complete`,
       { notes },
+    );
+    return response.data;
+  },
+
+  /**
+   * Records that the patient did not attend (SCRUM-38). The front desk for any appointment, a
+   * doctor for their own; only once it has ended. Final — a no-show cannot be changed afterwards.
+   */
+  async markNoShow(appointmentId: string): Promise<AppointmentRecord> {
+    const response = await apiClient.put<AppointmentRecord>(
+      `${appointmentsPath}/${appointmentId}/no-show`,
     );
     return response.data;
   },

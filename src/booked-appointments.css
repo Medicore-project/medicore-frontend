@@ -717,6 +717,11 @@
   background: var(--success-text);
 }
 
+/* Neutral, like the no-show status badge: the time was used, the visit was not. */
+.appt-history-item--noshow::before {
+  background: var(--text-muted);
+}
+
 .appt-history-line {
   display: flex;
   flex-wrap: wrap;

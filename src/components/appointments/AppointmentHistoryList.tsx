@@ -15,6 +15,8 @@ function describe(entry: AppointmentHistoryEntry): string {
       return 'Cancelled';
     case 'Completed':
       return 'Marked completed';
+    case 'NoShow':
+      return 'Marked a no-show';
     default:
       return entry.action;
   }
@@ -22,7 +24,7 @@ function describe(entry: AppointmentHistoryEntry): string {
 
 /**
  * Every change to one appointment, oldest first (SCRUM-36): the booking, then each reschedule,
- * cancellation or completion, with who made it and when. A completion's clinical notes are not
+ * cancellation, completion or no-show, with who made it and when. A completion's clinical notes are not
  * here — they are in the patient's medical record.
  */
 const AppointmentHistoryList: React.FC<{ entries: AppointmentHistoryEntry[] }> = ({ entries }) => {
