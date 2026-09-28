@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * Line icons shared by the Booked Appointments and booking pages. Inline SVG, like the login page's,
+ * Line icons shared by the Booked Appointments, booking, home and login pages. Inline SVG, like the login page's,
  * because the app has no icon library and a couple of pages' worth of glyphs is not worth adding one
  * for.
  *
@@ -162,6 +162,129 @@ export const ChevronRightIcon: React.FC<IconProps> = (p) => (
 export const ChevronLeftIcon: React.FC<IconProps> = (p) => (
   <Svg {...p}>
     <path d="m14 7-5 5 5 5" />
+  </Svg>
+);
+
+export const PhoneIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M6.6 3.5h2.6l1.4 4-2 1.5a11 11 0 0 0 6.4 6.4l1.5-2 4 1.4v2.6a2 2 0 0 1-2.1 2A16.5 16.5 0 0 1 4.6 5.6a2 2 0 0 1 2-2.1Z" />
+  </Svg>
+);
+
+export const MailIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+    <path d="m4 7 8 6 8-6" />
+  </Svg>
+);
+
+export const LockIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <rect x="5" y="10.5" width="14" height="10" rx="2.5" />
+    <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5M12 14.5v2" />
+  </Svg>
+);
+
+export const EyeIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M2.5 12c1-2.6 4.5-7 9.5-7s8.5 4.4 9.5 7c-1 2.6-4.5 7-9.5 7s-8.5-4.4-9.5-7Z" />
+    <circle cx="12" cy="12" r="2.75" />
+  </Svg>
+);
+
+export const EyeOffIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M3.5 3.5l17 17M10.6 10.6a2 2 0 0 0 2.8 2.8M9.4 5.4A9.7 9.7 0 0 1 12 5c5 0 8.5 4.4 9.5 7-.4 1-1.2 2.3-2.4 3.5M6.6 6.6C4.6 7.9 3.1 9.9 2.5 12c1 2.6 4.5 7 9.5 7 1.9 0 3.6-.6 5-1.5" />
+  </Svg>
+);
+
+export const HeartIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M12 20s-8-4.8-8-10.6A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 8 2.8C20 15.2 12 20 12 20Z" />
+  </Svg>
+);
+
+export const ShieldIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M12 3.5 19 6v5.5c0 4.4-3 7.8-7 9-4-1.2-7-4.6-7-9V6l7-2.5Z" />
+    <path d="m9 12 2.2 2.2L15.5 10" />
+  </Svg>
+);
+
+export const UsersIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <circle cx="9" cy="8.5" r="3.3" />
+    <path d="M3 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2M15.5 5.4a3.3 3.3 0 0 1 0 6.3M17.5 14.6c1.8.6 3.1 2.2 3.5 4.9" />
+  </Svg>
+);
+
+export const BuildingIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M4.5 20.5v-14l7.5-3 7.5 3v14M3 20.5h18" />
+    <path d="M12 8v5M9.5 10.5h5M10 20.5v-3.5h4v3.5" />
+  </Svg>
+);
+
+export const ScanIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+    <circle cx="12" cy="12" r="3.5" />
+  </Svg>
+);
+
+export const LeafIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M5 19c0-8 5-13.5 15-14.5-.5 10-6 15-14 15" />
+    <path d="M5 19c3-4 6-6.5 10-8.5" />
+  </Svg>
+);
+
+export const StarIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="m12 3.8 2.5 5.2 5.6.7-4.1 3.9 1 5.6L12 16.5l-5 2.7 1-5.6-4.1-3.9 5.6-.7L12 3.8Z" />
+  </Svg>
+);
+
+export const TrendUpIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="m3.5 16.5 6-6 4 4 7-7.5M15 7h5.5v5.5" />
+  </Svg>
+);
+
+export const PlusIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </Svg>
+);
+
+export const MenuIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </Svg>
+);
+
+export const CloseIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="m6 6 12 12M18 6 6 18" />
+  </Svg>
+);
+
+export const ArrowUpIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M12 19.5v-15M6.5 10 12 4.5l5.5 5.5" />
+  </Svg>
+);
+
+export const ArrowLeftIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M19.5 12h-15M10 6.5 4.5 12l5.5 5.5" />
+  </Svg>
+);
+
+export const InfoIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5M12 8h.01" />
   </Svg>
 );
 

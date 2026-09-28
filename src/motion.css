@@ -1,0 +1,133 @@
+/* ==========================================================================
+   Motion — shared entrance animations for the whole app.
+   Everything here is switched off under prefers-reduced-motion at the bottom.
+   ========================================================================== */
+
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Scroll reveal (components/motion/Reveal.tsx) ───────────────────────────── */
+
+.reveal {
+  opacity: 0;
+  transition:
+    opacity 0.8s var(--ease-out-expo),
+    transform 0.8s var(--ease-out-expo);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal--up { transform: translate3d(0, 34px, 0); }
+.reveal--left { transform: translate3d(-44px, 0, 0); }
+.reveal--right { transform: translate3d(44px, 0, 0); }
+.reveal--zoom { transform: scale(0.94); }
+.reveal--fade { transform: none; }
+
+/* `none`, not an identity transform: a transformed ancestor would become the containing block of
+   any position: fixed dialog rendered inside it. */
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Shared keyframes ───────────────────────────────────────────────────────── */
+
+@keyframes mc-rise {
+  from { opacity: 0; transform: translate3d(0, 24px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mc-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mc-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -12px, 0); }
+}
+
+@keyframes mc-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes mc-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+  80%, 100% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+
+@keyframes mc-shine {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to { transform: translateX(260%) skewX(-18deg); }
+}
+
+@keyframes mc-gradient-pan {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes mc-blob {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); border-radius: 42% 58% 60% 40% / 45% 45% 55% 55%; }
+  33% { transform: translate3d(30px, -26px, 0) scale(1.06); border-radius: 58% 42% 38% 62% / 55% 38% 62% 45%; }
+  66% { transform: translate3d(-22px, 18px, 0) scale(0.96); border-radius: 38% 62% 52% 48% / 40% 60% 40% 60%; }
+}
+
+@keyframes mc-shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(3px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+  40%, 60% { transform: translate3d(5px, 0, 0); }
+}
+
+/* ── Staff workspace: every page rises in when its route mounts ─────────────── */
+
+/* fill-mode backwards, not both: once the animation ends no transform is left applied, so modals
+   inside the page still position against the viewport. */
+.content-area > * {
+  animation: mc-rise 0.55s var(--ease-out-expo) backwards;
+}
+
+/* ── Public booking page ───────────────────────────────────────────────────── */
+
+.bk-topbar {
+  animation: mc-fade 0.5s ease backwards;
+}
+
+.bk-hero-text {
+  animation: mc-rise 0.7s var(--ease-out-expo) 0.05s backwards;
+}
+
+.bk-hero-art {
+  animation: mc-rise 0.7s var(--ease-out-expo) 0.18s backwards;
+}
+
+.bk-hero-illustration {
+  animation: mc-float 5s ease-in-out 1s infinite;
+}
+
+.bk-page-body {
+  animation: mc-rise 0.7s var(--ease-out-expo) 0.28s backwards;
+}
+
+/* ── Reduced motion: keep the content, drop the movement ───────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
