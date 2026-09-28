@@ -1101,6 +1101,51 @@ body {
   box-shadow: none;
 }
 
+/* Leaves room on the right for the show/hide password button */
+.login-field .login-input-wrap input.login-input-with-toggle {
+  padding-right: 48px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #7190bc;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.login-password-toggle:hover {
+  color: var(--primary);
+  background: #eef3fb;
+}
+
+.login-password-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.login-password-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
 .login-input-icon {
   position: absolute;
   z-index: 1;

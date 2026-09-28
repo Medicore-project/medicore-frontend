@@ -8,6 +8,7 @@ export const LoginPage: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -105,12 +106,33 @@ export const LoginPage: React.FC = () => {
                 </svg>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
+                  className="login-input-with-toggle"
                   required
                 />
+                <button
+                  type="button"
+                  className="login-password-toggle"
+                  onClick={() => setShowPassword((shown) => !shown)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  aria-controls="password"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path d="M3.5 3.5l17 17M10.6 10.6a2 2 0 0 0 2.8 2.8M9.4 5.4A9.7 9.7 0 0 1 12 5c5 0 8.5 4.4 9.5 7-.4 1-1.2 2.3-2.4 3.5M6.6 6.6C4.6 7.9 3.1 9.9 2.5 12c1 2.6 4.5 7 9.5 7 1.9 0 3.6-.6 5-1.5" />
+                    </svg>
+                  ) : (
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path d="M2.5 12c1-2.6 4.5-7 9.5-7s8.5 4.4 9.5 7c-1 2.6-4.5 7-9.5 7s-8.5-4.4-9.5-7Z" />
+                      <circle cx="12" cy="12" r="2.75" />
+                    </svg>
+                  )}
+                </button>
               </div>
             </div>
 
