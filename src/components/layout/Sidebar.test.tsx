@@ -125,6 +125,20 @@ describe('Sidebar booked-appointments tab', () => {
   });
 });
 
+describe('Sidebar collapsed to icons', () => {
+  it('keeps every link named, so the rail still reads correctly to a screen reader', () => {
+    auth.role = 'Admin';
+    render(
+      <MemoryRouter>
+        <Sidebar collapsed onToggleCollapsed={() => undefined} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Doctor Leave' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
 describe('Sidebar waitlist tab (SCRUM-37)', () => {
   it('is offered to the same roles as Booked Appointments, since it names patients', () => {
     for (const role of ['Admin', 'Receptionist', 'Doctor']) {

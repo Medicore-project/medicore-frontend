@@ -21,8 +21,26 @@ import type {
 } from '../api/appointments';
 import { staffWaitlistApi } from '../api/waitlist';
 import type { WaitlistEntry } from '../api/waitlist';
+import ActionDialog from '../components/common/ActionDialog';
+import {
+  AlertIcon,
+  CalendarIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  CloseIcon,
+  LockIcon,
+  PencilIcon,
+  PlaneIcon,
+  PlusIcon,
+  RefreshIcon,
+  TrashIcon,
+  UsersIcon,
+} from '../components/icons/LineIcons';
 import { useAuth } from '../contexts/AuthContext';
 import { extractErrorMessage } from '../utils/apiError';
+import { initialsOf } from '../utils/initials';
 import { canManageSchedules } from '../utils/permissions';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -68,6 +86,15 @@ function bookedChipTitle(appointment: AppointmentSummary, needsRescheduling: boo
   return `Booked: ${who} · ${appointment.durationMinutes} min · ${appointment.serviceCode}${rescheduling}`;
 }
 
+/** Minutes past midnight for an `HH:mm` value, or null when it is not one. */
+function minutesOf(time: string): number | null {
+  const match = /^(\d{2}):(\d{2})/.exec(time);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+/** Monday first, the way the clinic reads a week. */
+const WEEK_ORDER: DayOfWeekNumber[] = [1, 2, 3, 4, 5, 6, 0];
+
 const EMPTY_FORM: {
   dayOfWeek: DayOfWeekNumber;
   startTime: string;
@@ -83,6 +110,11 @@ const EMPTY_FORM: {
   effectiveFrom: toDateOnly(new Date()),
   effectiveTo: '',
 };
+
+/** A question the page is waiting on the user to answer, shown in an ActionDialog. */
+type PendingAction =
+  | { kind: 'block'; slot: SlotResponse }
+  | { kind: 'delete'; schedule: DoctorScheduleResponse };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -111,11 +143,15 @@ export const AppointmentsPage: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [busySlotId, setBusySlotId] = useState<string | null>(null);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart],
   );
+  const todayIso = toDateOnly(new Date());
+  const isCurrentWeek = toDateOnly(weekStart) === toDateOnly(startOfWeek(new Date()));
 
   // ── Data loading ────────────────────────────────────────────────────────────
 
@@ -273,6 +309,25 @@ export const AppointmentsPage: React.FC = () => {
     return runs;
   }, [weekDays, leaveByDate]);
 
+  /** The week at a glance, over the same data the grid draws. */
+  const weekStats = useMemo(
+    () => ({
+      free: slots.filter((s) => s.status === 'Available').length,
+      blocked: slots.filter((s) => s.status === 'Blocked').length,
+      booked: booked.length,
+      held: offered.length,
+      rescheduling: flaggedThisWeek.length,
+    }),
+    [slots, booked, offered, flaggedThisWeek],
+  );
+
+  const schedulesByDay = useMemo(() => {
+    const map = new Map<number, DoctorScheduleResponse[]>();
+    schedules.forEach((s) => map.set(s.dayOfWeek, [...(map.get(s.dayOfWeek) ?? []), s]));
+    map.forEach((list) => list.sort((a, b) => a.startTime.localeCompare(b.startTime)));
+    return map;
+  }, [schedules]);
+
   // ── Actions ─────────────────────────────────────────────────────────────────
 
   const announce = (message: string) => {
@@ -280,9 +335,9 @@ export const AppointmentsPage: React.FC = () => {
     setError(null);
   };
 
-  const openCreate = () => {
+  const openCreate = (dayOfWeek?: DayOfWeekNumber) => {
     setEditingId(null);
-    setForm({ ...EMPTY_FORM, effectiveFrom: toDateOnly(new Date()) });
+    setForm({ ...EMPTY_FORM, dayOfWeek: dayOfWeek ?? EMPTY_FORM.dayOfWeek, effectiveFrom: toDateOnly(new Date()) });
     setShowForm(true);
   };
 
@@ -329,23 +384,6 @@ export const AppointmentsPage: React.FC = () => {
     }
   };
 
-  const removeSchedule = async (schedule: DoctorScheduleResponse) => {
-    if (
-      !window.confirm(
-        `Delete the ${DAY_NAMES[schedule.dayOfWeek]} schedule? Free slots will be removed and any bookings flagged.`,
-      )
-    ) {
-      return;
-    }
-    try {
-      const impact = await scheduleApi.remove(schedule.scheduleId);
-      announce(`Schedule deleted. ${describeImpact(impact)}`);
-      await loadWeek();
-    } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to delete the schedule.'));
-    }
-  };
-
   const regenerate = async (schedule: DoctorScheduleResponse) => {
     try {
       const impact = await scheduleApi.regenerate(schedule.scheduleId);
@@ -356,20 +394,37 @@ export const AppointmentsPage: React.FC = () => {
     }
   };
 
-  const toggleBlock = async (slot: SlotResponse) => {
+  /** A blocked slot unblocks at once; blocking asks for an optional reason first. */
+  const onSlotClick = async (slot: SlotResponse) => {
+    if (!canManage) return;
+    if (slot.status !== 'Blocked') {
+      setPendingAction({ kind: 'block', slot });
+      return;
+    }
+    setBusySlotId(slot.slotId);
     try {
-      if (slot.status === 'Blocked') {
-        await slotApi.unblock(slot.slotId);
-        announce('Slot is bookable again.');
-      } else {
-        const reason = window.prompt('Why is this slot unavailable? (optional)') ?? null;
-        await slotApi.block(slot.slotId, reason);
-        announce('Slot blocked.');
-      }
+      await slotApi.unblock(slot.slotId);
+      announce('Slot is bookable again.');
       await loadWeek();
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to change the slot.'));
+    } finally {
+      setBusySlotId(null);
     }
+  };
+
+  /** Runs the confirmed dialog action. Rejections propagate so the dialog shows them in place. */
+  const confirmPending = async (text: string | null) => {
+    if (!pendingAction) return;
+    if (pendingAction.kind === 'block') {
+      await slotApi.block(pendingAction.slot.slotId, text);
+      announce('Slot blocked.');
+    } else {
+      const impact = await scheduleApi.remove(pendingAction.schedule.scheduleId);
+      announce(`Schedule deleted. ${describeImpact(impact)}`);
+    }
+    setPendingAction(null);
+    await loadWeek();
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -380,150 +435,249 @@ export const AppointmentsPage: React.FC = () => {
     6,
   ).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
+  const formStart = minutesOf(form.startTime);
+  const formEnd = minutesOf(form.endTime);
+  const formSpan = formStart !== null && formEnd !== null ? formEnd - formStart : 0;
+  const formSlots = formSpan > 0 ? Math.floor(formSpan / Number(form.slotDurationMinutes)) : 0;
+  const formInvalid = formSpan <= 0 || (form.effectiveTo !== '' && form.effectiveTo < form.effectiveFrom);
+
   return (
-    <div className="management-page schedule-page">
-      <div className="page-header">
-        <div>
+    <div className="management-page sc-page schedule-page">
+      {/* ── Header ── */}
+      <header className="sc-hero">
+        <div className="sc-hero-copy">
+          <span className="sc-eyebrow">
+            <CalendarIcon className="ws-icon-sm" /> Scheduling
+          </span>
           <h1>Appointments &amp; Scheduling</h1>
           <p className="page-subtitle">
             Doctor working hours and the slots they generate. Times shown in Asia/Colombo.
           </p>
         </div>
         {canManage && doctorId && (
-          <button type="button" className="btn btn-primary" onClick={openCreate}>
-            Add working day
+          <button type="button" className="btn btn-primary sc-hero-action" onClick={() => openCreate()}>
+            <PlusIcon className="ws-icon-sm" /> Add working day
           </button>
         )}
-      </div>
+      </header>
 
       {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
+        <div className="alert alert-danger sc-alert" role="alert">
+          <AlertIcon className="ws-icon-sm" />
+          <span>{error}</span>
         </div>
       )}
       {notice && (
-        <div className="alert alert-success" role="status">
-          {notice}
+        <div className="alert alert-success sc-alert" role="status">
+          <CheckIcon className="ws-icon-sm" />
+          <span>{notice}</span>
+          <button type="button" className="sc-alert-close" onClick={() => setNotice(null)} aria-label="Dismiss message">
+            <CloseIcon className="ws-icon-sm" />
+          </button>
         </div>
       )}
 
       {/* ── Controls ── */}
-      <div className="schedule-toolbar card">
-        <div className="form-group">
-          <label htmlFor="doctor">Doctor</label>
-          <select
-            id="doctor"
-            className="filter-select"
-            value={doctorId}
-            onChange={(e) => setDoctorId(e.target.value)}
-            disabled={isLoadingDoctors || doctors.length === 0}
-          >
-            {doctors.length === 0 && <option value="">No bookable doctors</option>}
-            {doctors.map((d) => (
-              <option key={d.doctorId} value={d.doctorId}>
-                {d.fullName}
-                {d.specialization ? ` — ${d.specialization}` : ''}
-              </option>
-            ))}
-          </select>
+      <section className="sc-toolbar" aria-label="Doctor and week">
+        <div className="sc-doctor">
+          <span className="sc-doctor-avatar" aria-hidden="true">
+            {selectedDoctor ? initialsOf(selectedDoctor.fullName) : '—'}
+          </span>
+          <div className="sc-doctor-field">
+            <label htmlFor="doctor">Doctor</label>
+            <select
+              id="doctor"
+              className="sc-select"
+              value={doctorId}
+              onChange={(e) => setDoctorId(e.target.value)}
+              disabled={isLoadingDoctors || doctors.length === 0}
+            >
+              {doctors.length === 0 && <option value="">No bookable doctors</option>}
+              {doctors.map((d) => (
+                <option key={d.doctorId} value={d.doctorId}>
+                  {d.fullName}
+                  {d.specialization ? ` — ${d.specialization}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="schedule-week-nav">
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setWeekStart(addDays(weekStart, -7))}>
-            ‹ Previous
+        <div className="sc-week-nav">
+          <div className="sc-segmented" role="group" aria-label="Change week">
+            <button type="button" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">
+              <ChevronLeftIcon className="ws-icon-sm" />
+            </button>
+            <button
+              type="button"
+              className={isCurrentWeek ? 'is-current' : ''}
+              onClick={() => setWeekStart(startOfWeek(new Date()))}
+            >
+              This week
+            </button>
+            <button type="button" onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">
+              <ChevronRightIcon className="ws-icon-sm" />
+            </button>
+          </div>
+          <span key={weekLabel} className="sc-week-label">
+            {weekLabel}
+          </span>
+          <button
+            type="button"
+            className="sc-icon-btn"
+            onClick={() => void loadWeek()}
+            disabled={isLoadingWeek || !doctorId}
+            aria-label="Reload this week"
+            title="Reload this week"
+          >
+            <RefreshIcon className={`ws-icon-sm ${isLoadingWeek ? 'is-spinning' : ''}`} />
           </button>
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setWeekStart(startOfWeek(new Date()))}>
-            This week
-          </button>
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setWeekStart(addDays(weekStart, 7))}>
-            Next ›
-          </button>
-          <span className="schedule-week-label">{weekLabel}</span>
         </div>
-      </div>
+      </section>
+
+      {/* ── The week at a glance ── */}
+      {doctorId && (
+        <div className="sc-stats" role="group" aria-label="This week at a glance">
+          {[
+            { key: 'free', label: 'Free slots', value: weekStats.free, icon: CalendarIcon },
+            { key: 'booked', label: 'Booked', value: weekStats.booked, icon: CheckIcon },
+            { key: 'held', label: 'Held for waitlist', value: weekStats.held, icon: UsersIcon },
+            { key: 'blocked', label: 'Blocked', value: weekStats.blocked, icon: LockIcon },
+            { key: 'rescheduling', label: 'Need rescheduling', value: weekStats.rescheduling, icon: AlertIcon },
+          ].map(({ key, label, value, icon: Icon }, index) => (
+            <div key={key} className={`sc-stat sc-stat--${key}`} style={{ '--i': index } as React.CSSProperties}>
+              <span className="sc-stat-icon" aria-hidden="true">
+                <Icon className="ws-icon-sm" />
+              </span>
+              <span className="sc-stat-text">
+                <strong>{isLoadingWeek ? '–' : value}</strong>
+                <span>{label}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {flaggedThisWeek.length > 0 && (
-        <div className="alert alert-danger schedule-flagged-banner" role="alert">
-          <strong>{flaggedThisWeek.length} booking(s) need rescheduling this week.</strong>
-          <ul>
-            {flaggedThisWeek.slice(0, 5).map((s) => (
-              <li key={s.slotId}>
-                {s.slotDate} at {colomboTimeLabel(s.startUtc)} — {s.flaggedReason ?? 'no longer fits the schedule'}
-              </li>
-            ))}
-          </ul>
+        <div className="alert alert-danger sc-flagged" role="alert">
+          <AlertIcon className="ws-icon" />
+          <div>
+            <strong>{flaggedThisWeek.length} booking(s) need rescheduling this week.</strong>
+            <ul>
+              {flaggedThisWeek.slice(0, 5).map((s) => (
+                <li key={s.slotId}>
+                  {s.slotDate} at {colomboTimeLabel(s.startUtc)} — {s.flaggedReason ?? 'no longer fits the schedule'}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
       {/* ── Weekly grid ── */}
-      <div className="card schedule-grid-card">
-        <h2 className="detail-section-title">
-          {selectedDoctor ? selectedDoctor.fullName : 'Week'}
-        </h2>
+      <section className="sc-card sc-grid-card">
+        <div className="sc-card-head">
+          <div>
+            <h2>{selectedDoctor ? selectedDoctor.fullName : 'Week'}</h2>
+            <p>
+              {selectedDoctor?.specialization ? `${selectedDoctor.specialization} · ` : ''}
+              {canManage ? 'Select a free slot to block it, or a blocked one to free it.' : 'The doctor’s slots for the week.'}
+            </p>
+          </div>
+          <ul className="sc-legend" aria-label="Legend">
+            <li><span className="sc-swatch sc-swatch--free" /> Free slot</li>
+            <li><span className="sc-swatch sc-swatch--booked" /> Patient booked</li>
+            <li><span className="sc-swatch sc-swatch--offered" /> Held</li>
+            <li><span className="sc-swatch sc-swatch--blocked" /> Blocked slot</li>
+            <li><span className="sc-swatch sc-swatch--flagged" /> Reschedule</li>
+            <li><span className="sc-swatch sc-swatch--leave" /> Leave</li>
+          </ul>
+        </div>
 
-        {isLoadingWeek ? (
-          <p className="schedule-empty">Loading…</p>
+        {/* The skeleton covers the doctor list loading too, so the empty-week message does not flash
+            up before there is a doctor to have an empty week. */}
+        {isLoadingWeek || isLoadingDoctors ? (
+          <div className="sc-grid-skeleton" aria-label="Loading the week">
+            {Array.from({ length: 5 }, (_, row) => (
+              <div key={row} className="sc-skeleton-row">
+                {Array.from({ length: 8 }, (__, col) => (
+                  <span key={col} className="sc-skeleton" style={{ '--i': row * 8 + col } as React.CSSProperties} />
+                ))}
+              </div>
+            ))}
+          </div>
         ) : timeRows.length === 0 && weekFullyOnLeave ? (
-          <p className="schedule-empty schedule-empty--leave">
-            {selectedDoctor
-              ? `${selectedDoctor.fullName} is on approved leave`
-              : 'On approved leave'}{' '}
-            for the whole of this week.
-          </p>
+          <div className="sc-empty sc-empty--leave">
+            <PlaneIcon className="sc-empty-icon" />
+            <p className="schedule-empty">
+              {selectedDoctor
+                ? `${selectedDoctor.fullName} is on approved leave`
+                : 'On approved leave'}{' '}
+              for the whole of this week.
+            </p>
+          </div>
         ) : timeRows.length === 0 && leaveRunsThisWeek.length > 0 ? (
-          <div className="schedule-empty schedule-empty--notice">
-            <p className="schedule-empty-title">No free slots this week</p>
-            <div className="leave-days">
-              <span className="leave-days-label">On leave</span>
+          <div className="sc-empty">
+            <PlaneIcon className="sc-empty-icon" />
+            <p className="sc-empty-title">No free slots this week</p>
+            <div className="sc-leave-days">
+              <span className="sc-leave-days-label">On leave</span>
               {leaveRunsThisWeek.map((run) => (
                 <span
                   key={`${run.leave.leaveId}-${toDateOnly(run.start)}`}
-                  className="leave-day-chip"
+                  className="sc-leave-chip"
                   title={run.leave.reason ?? undefined}
                 >
                   {dayRangeLabel(run.start, run.end)}
                 </span>
               ))}
             </div>
-            <p className="schedule-empty-hint">The other days are in the past or have no working hours.</p>
+            <p className="sc-empty-hint">The other days are in the past or have no working hours.</p>
           </div>
         ) : timeRows.length === 0 ? (
-          <div className="schedule-empty schedule-empty--notice">
-            <p className="schedule-empty-title">No free slots this week</p>
-            <p className="schedule-empty-hint">
+          <div className="sc-empty">
+            <CalendarIcon className="sc-empty-icon" />
+            <p className="sc-empty-title">No free slots this week</p>
+            <p className="sc-empty-hint">
               These dates are in the past, have no working hours, or fall on public holidays.
             </p>
           </div>
         ) : (
-          <div className="schedule-grid-scroll">
-            <table className="schedule-grid">
+          <div className="sc-grid-scroll">
+            <table className="sc-grid">
               <thead>
                 <tr>
-                  <th className="schedule-time-col">Time</th>
-                  {weekDays.map((day) => (
-                    <th key={day.toISOString()}>
-                      <span className="schedule-day-name">
-                        {DAY_NAMES[day.getDay()].slice(0, 3)}
-                      </span>
-                      <span className="schedule-day-date">
-                        {day.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                      </span>
-                    </th>
-                  ))}
+                  <th className="sc-time-col">Time</th>
+                  {weekDays.map((day) => {
+                    const iso = toDateOnly(day);
+                    return (
+                      <th
+                        key={day.toISOString()}
+                        className={`${iso === todayIso ? 'is-today' : ''} ${iso < todayIso ? 'is-past' : ''}`}
+                      >
+                        <span className="sc-day-name">{DAY_NAMES[day.getDay()].slice(0, 3)}</span>
+                        <span className="sc-day-date">
+                          {day.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                        </span>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {timeRows.map((time) => (
-                  <tr key={time}>
-                    <th scope="row" className="schedule-time-col">
+                {timeRows.map((time, rowIndex) => (
+                  <tr key={time} style={{ '--row': rowIndex } as React.CSSProperties}>
+                    <th scope="row" className="sc-time-col">
                       {time}
                     </th>
                     {weekDays.map((day) => {
-                      const appointment = bookedIndex.get(`${toDateOnly(day)}|${time}`);
+                      const iso = toDateOnly(day);
+                      const dayClass = `sc-cell ${iso === todayIso ? 'is-today' : ''} ${iso < todayIso ? 'is-past' : ''}`;
+                      const appointment = bookedIndex.get(`${iso}|${time}`);
                       if (appointment) {
                         const needsRescheduling = flaggedSlotIds.has(appointment.slotId);
                         return (
-                          <td key={day.toISOString()} className="schedule-cell">
+                          <td key={day.toISOString()} className={dayClass}>
                             <div
                               className={`slot-chip slot-chip--patient ${
                                 needsRescheduling ? 'slot-chip--flagged' : 'slot-chip--booked'
@@ -531,9 +685,7 @@ export const AppointmentsPage: React.FC = () => {
                               data-testid="booked-slot"
                               title={bookedChipTitle(appointment, needsRescheduling)}
                             >
-                              <span className="slot-chip-patient">
-                                {appointment.patientName ?? 'Booked'}
-                              </span>
+                              <span className="slot-chip-patient">{appointment.patientName ?? 'Booked'}</span>
                               {appointment.patientNumber && (
                                 <span className="slot-chip-number">{appointment.patientNumber}</span>
                               )}
@@ -541,10 +693,10 @@ export const AppointmentsPage: React.FC = () => {
                           </td>
                         );
                       }
-                      const offer = offeredIndex.get(`${toDateOnly(day)}|${time}`);
+                      const offer = offeredIndex.get(`${iso}|${time}`);
                       if (offer) {
                         return (
-                          <td key={day.toISOString()} className="schedule-cell">
+                          <td key={day.toISOString()} className={dayClass}>
                             <div
                               className="slot-chip slot-chip--patient slot-chip--offered"
                               data-testid="offered-slot"
@@ -558,29 +710,29 @@ export const AppointmentsPage: React.FC = () => {
                           </td>
                         );
                       }
-                      const slot = slotIndex.get(`${toDateOnly(day)}|${time}`);
+                      const slot = slotIndex.get(`${iso}|${time}`);
                       if (!slot) {
-                        const leave = leaveByDate.get(toDateOnly(day));
+                        const leave = leaveByDate.get(iso);
                         if (leave) {
                           return (
                             <td
                               key={day.toISOString()}
-                              className="schedule-cell schedule-cell--leave"
+                              className={`${dayClass} sc-cell--leave`}
                               title={`On approved leave${leave.reason ? `: ${leave.reason}` : ''} (${leave.startDate} to ${leave.endDate})`}
                             >
                               On leave
                             </td>
                           );
                         }
-                        return <td key={day.toISOString()} className="schedule-cell schedule-cell--none" />;
+                        return <td key={day.toISOString()} className={`${dayClass} sc-cell--none`} />;
                       }
                       return (
-                        <td key={day.toISOString()} className="schedule-cell">
+                        <td key={day.toISOString()} className={dayClass}>
                           <button
                             type="button"
-                            className={`slot-chip slot-chip--${slot.status.toLowerCase()}`}
-                            onClick={() => canManage && void toggleBlock(slot)}
-                            disabled={!canManage}
+                            className={`slot-chip slot-chip--${slot.status.toLowerCase()} ${busySlotId === slot.slotId ? 'is-busy' : ''}`}
+                            onClick={() => void onSlotClick(slot)}
+                            disabled={!canManage || busySlotId === slot.slotId}
                             title={
                               slot.status === 'Blocked'
                                 ? `Blocked: ${slot.flaggedReason ?? 'no reason given'}`
@@ -598,112 +750,126 @@ export const AppointmentsPage: React.FC = () => {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {/* ── Weekly pattern ── */}
-      <div className="card">
-        <h2 className="detail-section-title">Weekly pattern</h2>
-        {schedules.length === 0 ? (
-          <p className="schedule-empty">This doctor has no working days configured.</p>
+      <section className="sc-card">
+        <div className="sc-card-head">
+          <div>
+            <h2>Weekly pattern</h2>
+            <p>The working hours that generate the grid above, day by day.</p>
+          </div>
+        </div>
+        {schedules.length === 0 && !canManage ? (
+          <div className="sc-empty sc-empty--compact">
+            <ClockIcon className="sc-empty-icon" />
+            <p className="sc-empty-title">This doctor has no working days configured.</p>
+          </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Day</th>
-                <th>Hours</th>
-                <th>Slot length</th>
-                <th>Effective</th>
-                <th>Status</th>
-                {canManage && <th>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {schedules.map((s) => (
-                <tr key={s.scheduleId}>
-                  <td>{DAY_NAMES[s.dayOfWeek]}</td>
-                  <td>
-                    {s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)}
-                  </td>
-                  <td>{s.slotDurationMinutes} min</td>
-                  <td>
-                    {s.effectiveFrom} → {s.effectiveTo ?? 'open-ended'}
-                  </td>
-                  <td>
-                    <span className={s.isActive ? 'badge badge-success' : 'badge badge-inactive'}>
-                      {s.isActive ? 'Active' : 'Paused'}
-                    </span>
-                  </td>
-                  {canManage && (
-                    <td className="action-buttons">
-                      <button type="button" className="btn btn-sm btn-outline" onClick={() => openEdit(s)}>
-                        Edit
-                      </button>
-                      <button type="button" className="btn btn-sm btn-outline" onClick={() => void regenerate(s)}>
-                        Regenerate
-                      </button>
+          <>
+            {schedules.length === 0 && (
+              <p className="sc-pattern-hint">This doctor has no working days configured. Add one to open bookings.</p>
+            )}
+            <div className="sc-pattern">
+              {WEEK_ORDER.map((dayNumber, index) => {
+                const list = schedulesByDay.get(dayNumber) ?? [];
+                return (
+                  <div
+                    key={dayNumber}
+                    className={`sc-pattern-day ${list.length ? 'has-hours' : ''}`}
+                    style={{ '--i': index } as React.CSSProperties}
+                  >
+                    <span className="sc-pattern-dayname">{DAY_NAMES[dayNumber]}</span>
+                    {list.map((s) => (
+                      <article key={s.scheduleId} className={`sc-shift ${s.isActive ? '' : 'is-paused'}`}>
+                        <strong className="sc-shift-hours">
+                          {s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)}
+                        </strong>
+                        <span className="sc-shift-meta">
+                          {s.slotDurationMinutes} min slots · {s.isActive ? 'Active' : 'Paused'}
+                        </span>
+                        <span className="sc-shift-range">
+                          {s.effectiveFrom} → {s.effectiveTo ?? 'open-ended'}
+                        </span>
+                        {canManage && (
+                          <span className="sc-shift-actions">
+                            <button type="button" onClick={() => openEdit(s)} aria-label={`Edit ${DAY_NAMES[dayNumber]} schedule`} title="Edit">
+                              <PencilIcon className="ws-icon-sm" />
+                            </button>
+                            <button type="button" onClick={() => void regenerate(s)} aria-label={`Regenerate ${DAY_NAMES[dayNumber]} slots`} title="Regenerate slots">
+                              <RefreshIcon className="ws-icon-sm" />
+                            </button>
+                            <button
+                              type="button"
+                              className="is-danger"
+                              onClick={() => setPendingAction({ kind: 'delete', schedule: s })}
+                              aria-label={`Delete ${DAY_NAMES[dayNumber]} schedule`}
+                              title="Delete"
+                            >
+                              <TrashIcon className="ws-icon-sm" />
+                            </button>
+                          </span>
+                        )}
+                      </article>
+                    ))}
+                    {list.length === 0 && <span className="sc-pattern-off">Day off</span>}
+                    {canManage && doctorId && (
                       <button
                         type="button"
-                        className="btn btn-sm btn-danger-outline"
-                        onClick={() => void removeSchedule(s)}
+                        className="sc-pattern-add"
+                        onClick={() => openCreate(dayNumber)}
+                        aria-label={`Add hours on ${DAY_NAMES[dayNumber]}`}
                       >
-                        Delete
+                        <PlusIcon className="ws-icon-sm" /> Add hours
                       </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
-      </div>
+      </section>
 
       {/* ── Schedule form ── */}
       {showForm && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-panel">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="sc-form-title">
+          <div className="modal-panel sc-form-panel">
             <div className="modal-header">
-              <h2>{editingId ? 'Edit working day' : 'Add working day'}</h2>
+              <div>
+                <h2 id="sc-form-title">{editingId ? 'Edit working day' : 'Add working day'}</h2>
+                <p className="page-subtitle">{selectedDoctor?.fullName}</p>
+              </div>
               <button type="button" className="modal-close" onClick={() => setShowForm(false)} aria-label="Close">
                 ×
               </button>
             </div>
             <form className="modal-form" onSubmit={submitForm}>
+              <div className="form-group">
+                <span className="sc-form-label" id="sc-day-label">Day</span>
+                <div className="sc-day-picker" role="radiogroup" aria-labelledby="sc-day-label">
+                  {WEEK_ORDER.map((dayNumber) => (
+                    <button
+                      key={dayNumber}
+                      type="button"
+                      role="radio"
+                      aria-checked={form.dayOfWeek === dayNumber}
+                      disabled={editingId !== null}
+                      className={form.dayOfWeek === dayNumber ? 'is-selected' : ''}
+                      onClick={() => setForm({ ...form, dayOfWeek: dayNumber })}
+                    >
+                      {DAY_NAMES[dayNumber].slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
+                {editingId !== null && (
+                  <span className="field-help">
+                    The day cannot be changed. Delete this schedule and add another instead.
+                  </span>
+                )}
+              </div>
+
               <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="dayOfWeek">Day</label>
-                  <select
-                    id="dayOfWeek"
-                    value={form.dayOfWeek}
-                    disabled={editingId !== null}
-                    onChange={(e) =>
-                      setForm({ ...form, dayOfWeek: Number(e.target.value) as DayOfWeekNumber })
-                    }
-                  >
-                    {DAY_NAMES.map((name, index) => (
-                      <option key={name} value={index}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                  {editingId !== null && (
-                    <span className="field-help">
-                      The day cannot be changed. Delete this schedule and add another instead.
-                    </span>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="slotDuration">Slot length</label>
-                  <select
-                    id="slotDuration"
-                    value={form.slotDurationMinutes}
-                    onChange={(e) => setForm({ ...form, slotDurationMinutes: Number(e.target.value) })}
-                  >
-                    <option value={15}>15 minutes</option>
-                    <option value={30}>30 minutes</option>
-                  </select>
-                </div>
-
                 <div className="form-group">
                   <label htmlFor="startTime">Start</label>
                   <input
@@ -724,6 +890,18 @@ export const AppointmentsPage: React.FC = () => {
                     value={form.endTime}
                     onChange={(e) => setForm({ ...form, endTime: e.target.value })}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="slotDuration">Slot length</label>
+                  <select
+                    id="slotDuration"
+                    value={form.slotDurationMinutes}
+                    onChange={(e) => setForm({ ...form, slotDurationMinutes: Number(e.target.value) })}
+                  >
+                    <option value={15}>15 minutes</option>
+                    <option value={30}>30 minutes</option>
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -749,17 +927,51 @@ export const AppointmentsPage: React.FC = () => {
                 </div>
               </div>
 
+              <div className={`sc-preview ${formInvalid ? 'is-invalid' : ''}`} aria-live="polite">
+                <ClockIcon className="ws-icon-sm" />
+                {formSpan <= 0
+                  ? 'The end time must be after the start time.'
+                  : form.effectiveTo !== '' && form.effectiveTo < form.effectiveFrom
+                    ? 'The last effective date is before the first.'
+                    : `Every ${DAY_NAMES[form.dayOfWeek]}: ${formSlots} slot${formSlots === 1 ? '' : 's'} of ${form.slotDurationMinutes} minutes, ${form.startTime}–${form.endTime}.`}
+              </div>
+
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={isSaving}>
+                <button type="submit" className="btn btn-primary" disabled={isSaving || formInvalid}>
                   {isSaving ? 'Saving…' : editingId ? 'Save changes' : 'Create'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {pendingAction?.kind === 'block' && (
+        <ActionDialog
+          title="Block this slot?"
+          subtitle={`${pendingAction.slot.slotDate} at ${colomboTimeLabel(pendingAction.slot.startUtc)} · ${selectedDoctor?.fullName ?? ''}`}
+          body="Patients will not be able to book it until it is unblocked."
+          field={{ label: 'Reason', placeholder: 'For example, a ward round or a meeting.', maxLength: 200 }}
+          confirmLabel="Block slot"
+          busyLabel="Blocking…"
+          onConfirm={confirmPending}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+      {pendingAction?.kind === 'delete' && (
+        <ActionDialog
+          title={`Delete the ${DAY_NAMES[pendingAction.schedule.dayOfWeek]} schedule?`}
+          subtitle={`${pendingAction.schedule.startTime.slice(0, 5)} – ${pendingAction.schedule.endTime.slice(0, 5)} · ${selectedDoctor?.fullName ?? ''}`}
+          body="Its free slots are removed, and any bookings on them are flagged for rescheduling."
+          confirmLabel="Delete schedule"
+          busyLabel="Deleting…"
+          tone="danger"
+          onConfirm={confirmPending}
+          onClose={() => setPendingAction(null)}
+        />
       )}
     </div>
   );

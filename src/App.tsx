@@ -8,6 +8,7 @@ import StaffListPage from './pages/StaffListPage';
 import StaffDetailPage from './pages/StaffDetailPage';
 import AuditReportPage from './pages/AuditReportPage';
 import DemographicsReportPage from './pages/DemographicsReportPage';
+import UtilisationReportPage from './pages/UtilisationReportPage';
 import PatientRegistrationPage from './pages/PatientRegistrationPage';
 import PatientProfilePage from './pages/PatientProfilePage';
 import PatientSearchPage from './pages/PatientSearchPage';
@@ -66,6 +67,7 @@ export const App: React.FC = () => {
           <Route path="/staff/:id" element={<StaffDetailPage />} />
           <Route path="/reports/audit" element={<AuditReportPage />} />
           <Route path="/reports/demographics" element={<DemographicsReportPage />} />
+          <Route path="/reports/utilisation" element={<UtilisationReportPage />} />
         </Route>
       </Route>
       {/* Readable by the front desk, writable only by Admin — the pages gate their own

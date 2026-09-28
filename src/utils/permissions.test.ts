@@ -10,6 +10,7 @@ import {
   canApproveLeave,
   canChangeAppointments,
   canCompleteAppointment,
+  canMarkNoShow,
   canManageOrganization,
   canManagePatientProfiles,
   canManageSchedules,
@@ -148,5 +149,24 @@ describe('canCompleteAppointment (SCRUM-36)', () => {
     expect(canCompleteAppointment({ role: 'Doctor', staffId: null }, 'doctor-1')).toBe(false);
     expect(canCompleteAppointment({ role: 'Doctor', staffId: '' }, '')).toBe(false);
     expect(canCompleteAppointment(null, 'doctor-1')).toBe(false);
+  });
+});
+
+describe('canMarkNoShow (SCRUM-38)', () => {
+  it('allows the front desk for any appointment', () => {
+    expect(canMarkNoShow({ role: 'Admin', staffId: null }, 'doctor-1')).toBe(true);
+    expect(canMarkNoShow({ role: 'Receptionist', staffId: 'someone' }, 'doctor-1')).toBe(true);
+  });
+
+  it('allows a doctor only for their own appointment', () => {
+    expect(canMarkNoShow({ role: 'Doctor', staffId: 'doctor-1' }, 'doctor-1')).toBe(true);
+    expect(canMarkNoShow({ role: 'Doctor', staffId: 'doctor-2' }, 'doctor-1')).toBe(false);
+    expect(canMarkNoShow({ role: 'Doctor', staffId: null }, 'doctor-1')).toBe(false);
+  });
+
+  it('never allows a nurse, a patient or nobody', () => {
+    expect(canMarkNoShow({ role: 'Nurse', staffId: 'doctor-1' }, 'doctor-1')).toBe(false);
+    expect(canMarkNoShow({ role: 'Patient', staffId: null }, 'doctor-1')).toBe(false);
+    expect(canMarkNoShow(null, 'doctor-1')).toBe(false);
   });
 });

@@ -64,4 +64,46 @@ describe('LandingPage', () => {
 
     expect(screen.getByText('in-app booking')).toBeInTheDocument();
   });
+
+  it('swaps the service details when another service is chosen', () => {
+    renderAs(undefined);
+
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('General Medicine');
+
+    const imaging = screen.getByRole('tab', { name: /Diagnostic Imaging/ });
+    fireEvent.click(imaging);
+
+    expect(imaging).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('CT and MRI scanning');
+  });
+
+  it('moves between services with the arrow keys', () => {
+    renderAs(undefined);
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: /General Medicine/ }), { key: 'ArrowRight' });
+
+    expect(screen.getByRole('tab', { name: /Diagnostic Imaging/ })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('opens one FAQ answer at a time', () => {
+    renderAs(undefined);
+    const first = screen.getByRole('button', { name: 'Do I need an account to book an appointment?' });
+    const second = screen.getByRole('button', { name: 'What if the doctor I want is fully booked?' });
+
+    expect(first).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(second);
+
+    expect(second).toHaveAttribute('aria-expanded', 'true');
+    expect(first).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('offers the staff login from the mobile menu too', () => {
+    renderAs(undefined);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Staff login' }));
+
+    expect(screen.getByText('staff login')).toBeInTheDocument();
+  });
 });

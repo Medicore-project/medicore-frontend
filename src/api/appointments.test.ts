@@ -71,6 +71,17 @@ describe('the staff appointment-change client (SCRUM-36)', () => {
     expect(body(seen[2])).toEqual({ notes: 'Reviewed BP.' });
   });
 
+  it('marks a no-show with a bodiless PUT (SCRUM-38)', async () => {
+    const { appointments, seen } = await loadAppointments({ appointmentId: 'a-1', status: 'NoShow' });
+
+    const updated = await appointments.appointmentChangeApi.markNoShow('a-1');
+
+    expect(seen.map((r) => [r.method, r.url])).toEqual([['put', '/appointment/api/appointments/a-1/no-show']]);
+    expect(seen[0].data).toBeUndefined();
+    expect(seen[0].headers.Authorization).toBe('Bearer staff-token');
+    expect(updated.status).toBe('NoShow');
+  });
+
   it('sends the staff token even while a patient booking token is held', async () => {
     // A receptionist who just booked for a patient still holds that patient's token. Every
     // change here must go out as the receptionist, or the service refuses it.
