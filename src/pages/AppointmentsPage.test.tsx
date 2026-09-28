@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppointmentSummary, DoctorLeaveResponse, SlotResponse } from '../api/appointments';
 import AppointmentsPage from './AppointmentsPage';
@@ -379,5 +379,84 @@ describe('AppointmentsPage slots held for the waitlist (SCRUM-37)', () => {
 
     expect(await screen.findByRole('button', { name: 'Free' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('AppointmentsPage redesign interactions', () => {
+  it('asks for a reason before blocking a free slot, then blocks it', async () => {
+    const slot = slotAt(dayOfWeek(0));
+    api.slot.available.mockResolvedValue([slot]);
+    api.slot.block.mockResolvedValue({ ...slot, status: 'Blocked' });
+
+    render(<AppointmentsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Free' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Block this slot?' });
+    fireEvent.change(within(dialog).getByLabelText(/Reason/), { target: { value: 'Ward round' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Block slot' }));
+
+    await waitFor(() => expect(api.slot.block).toHaveBeenCalledWith(slot.slotId, 'Ward round'));
+    expect(await screen.findByText('Slot blocked.')).toBeInTheDocument();
+  });
+
+  it('frees a blocked slot straight away', async () => {
+    const slot = { ...slotAt(dayOfWeek(0)), status: 'Blocked' as const };
+    api.slot.available.mockResolvedValue([slot]);
+    api.slot.unblock.mockResolvedValue({ ...slot, status: 'Available' });
+
+    render(<AppointmentsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Blocked' }));
+
+    await waitFor(() => expect(api.slot.unblock).toHaveBeenCalledWith(slot.slotId));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('confirms in a dialog before deleting a working day', async () => {
+    api.schedule.listForDoctor.mockResolvedValue([
+      {
+        scheduleId: 'schedule-1',
+        doctorId: DOCTOR_ID,
+        dayOfWeek: 1,
+        startTime: '09:00:00',
+        endTime: '12:00:00',
+        slotDurationMinutes: 30,
+        effectiveFrom: '2026-09-01',
+        effectiveTo: null,
+        isActive: true,
+        createdAt: '2026-09-01T00:00:00Z',
+        createdBy: 'admin',
+      },
+    ]);
+    api.schedule.remove.mockResolvedValue({ doctorsProcessed: 1, slotsCreated: 0, slotsRemoved: 6, slotsFlagged: 0 });
+
+    render(<AppointmentsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete Monday schedule' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete schedule' }));
+
+    await waitFor(() => expect(api.schedule.remove).toHaveBeenCalledWith('schedule-1'));
+    expect(await screen.findByText('Schedule deleted. 6 removed.')).toBeInTheDocument();
+  });
+
+  it('counts the week at a glance', async () => {
+    api.slot.available.mockResolvedValue([slotAt(dayOfWeek(0)), slotAt(dayOfWeek(1))]);
+    api.booked.list.mockResolvedValue([bookingAt(dayOfWeek(2))]);
+
+    render(<AppointmentsPage />);
+
+    const stats = await screen.findByRole('group', { name: 'This week at a glance' });
+    await waitFor(() => expect(within(stats).getByText('Free slots').previousSibling).toHaveTextContent('2'));
+    expect(within(stats).getByText('Booked').previousSibling).toHaveTextContent('1');
+  });
+
+  it('previews the slots a working day will generate, and refuses an end before the start', async () => {
+    render(<AppointmentsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add working day' }));
+
+    expect(screen.getByText('Every Monday: 16 slots of 30 minutes, 09:00–17:00.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('End'), { target: { value: '08:00' } });
+
+    expect(screen.getByText('The end time must be after the start time.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 });

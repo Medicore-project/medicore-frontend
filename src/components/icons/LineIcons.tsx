@@ -362,6 +362,25 @@ export const MoonIcon: React.FC<IconProps> = (p) => (
   </Svg>
 );
 
+export const PencilIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M4.5 19.5h4l10-10a2.8 2.8 0 0 0-4-4l-10 10v4ZM13 7l4 4" />
+  </Svg>
+);
+
+export const TrashIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5" />
+  </Svg>
+);
+
+export const AlertIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M12 4 21 19.5H3L12 4Z" />
+    <path d="M12 10v4.5M12 17.2h.01" />
+  </Svg>
+);
+
 /** A filled check in a circle — the badge on a selected time. */
 export const CheckBadgeIcon: React.FC<IconProps> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
