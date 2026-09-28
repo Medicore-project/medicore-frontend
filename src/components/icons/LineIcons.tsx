@@ -288,6 +288,80 @@ export const InfoIcon: React.FC<IconProps> = (p) => (
   </Svg>
 );
 
+export const GridIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
+    <rect x="13.5" y="3.5" width="7" height="7" rx="2" />
+    <rect x="3.5" y="13.5" width="7" height="7" rx="2" />
+    <rect x="13.5" y="13.5" width="7" height="7" rx="2" />
+  </Svg>
+);
+
+export const CalendarPlusIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+    <path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" />
+  </Svg>
+);
+
+export const PlaneIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M10.5 13.5 4 11l1.5-1.5 7 .5 4.5-5a2 2 0 0 1 2.8 2.8l-5 4.5.5 7L13.8 21l-2.5-6.5-3.8 3.3.3 2.2-1.3 1.3-1.5-3-3-1.5 1.3-1.3 2.2.3 3-2.7Z" />
+  </Svg>
+);
+
+export const PieIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12V3.5Z" />
+    <path d="M15 3.8A8.5 8.5 0 0 1 20.2 9H15V3.8Z" />
+  </Svg>
+);
+
+export const ActivityIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+  </Svg>
+);
+
+export const LogoutIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14M9.5 8 5.5 12l4 4M5.5 12h10" />
+  </Svg>
+);
+
+export const SidebarIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <rect x="3.5" y="4" width="17" height="16" rx="3" />
+    <path d="M9.5 4v16M6 8.5h1M6 11.5h1" />
+  </Svg>
+);
+
+export const RefreshIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" />
+  </Svg>
+);
+
+export const GlobeIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M3.5 12h17M12 3.5c2.3 2.4 3.4 5.2 3.4 8.5s-1.1 6.1-3.4 8.5c-2.3-2.4-3.4-5.2-3.4-8.5S9.7 5.9 12 3.5Z" />
+  </Svg>
+);
+
+export const SunIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" />
+  </Svg>
+);
+
+export const MoonIcon: React.FC<IconProps> = (p) => (
+  <Svg {...p}>
+    <path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z" />
+  </Svg>
+);
+
 /** A filled check in a circle — the badge on a selected time. */
 export const CheckBadgeIcon: React.FC<IconProps> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
