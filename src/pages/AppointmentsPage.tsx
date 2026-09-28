@@ -19,6 +19,8 @@ import type {
   SlotReconciliationSummary,
   SlotResponse,
 } from '../api/appointments';
+import { staffWaitlistApi } from '../api/waitlist';
+import type { WaitlistEntry } from '../api/waitlist';
 import { useAuth } from '../contexts/AuthContext';
 import { extractErrorMessage } from '../utils/apiError';
 import { canManageSchedules } from '../utils/permissions';
@@ -95,6 +97,8 @@ export const AppointmentsPage: React.FC = () => {
   const [slots, setSlots] = useState<SlotResponse[]>([]);
   const [flagged, setFlagged] = useState<SlotResponse[]>([]);
   const [schedules, setSchedules] = useState<DoctorScheduleResponse[]>([]);
+  // Slots held for a waitlisted patient this week (SCRUM-37).
+  const [offered, setOffered] = useState<WaitlistEntry[]>([]);
   const [approvedLeave, setApprovedLeave] = useState<DoctorLeaveResponse[]>([]);
   const [booked, setBooked] = useState<AppointmentSummary[]>([]);
 
@@ -143,12 +147,15 @@ export const AppointmentsPage: React.FC = () => {
     try {
       const from = toDateOnly(weekStart);
       const to = toDateOnly(addDays(weekStart, 6));
-      const [available, flaggedSlots, doctorSchedules, leave, appointments] = await Promise.all([
+      const [available, flaggedSlots, doctorSchedules, leave, appointments, offers] = await Promise.all([
         slotApi.available(doctorId, from, to),
         slotApi.flagged(doctorId),
         scheduleApi.listForDoctor(doctorId),
         leaveApi.approved(doctorId, from, to),
         bookedApi.list({ doctorId, from, to }),
+        // SCRUM-37: slots held for the waitlist. Missing them only leaves those cells blank, so a
+        // failure here must not take the whole week down with it.
+        staffWaitlistApi.list({ doctorId, from, to, status: 'Offered' }).catch(() => []),
       ]);
       setSlots(available);
       setFlagged(flaggedSlots);
@@ -157,6 +164,7 @@ export const AppointmentsPage: React.FC = () => {
       // A cancelled appointment released its slot, which the availability listing already shows
       // as free again; drawing it as well would put two things in one cell.
       setBooked(appointments.filter((a) => a.status === 'Booked'));
+      setOffered(offers);
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load the schedule.'));
       setSlots([]);
@@ -164,6 +172,7 @@ export const AppointmentsPage: React.FC = () => {
       setSchedules([]);
       setApprovedLeave([]);
       setBooked([]);
+      setOffered([]);
     } finally {
       setIsLoadingWeek(false);
     }
@@ -186,9 +195,20 @@ export const AppointmentsPage: React.FC = () => {
       // Booked times too: the availability listing returns free slots only, so a booked slot
       // would otherwise have no row to be drawn in and simply vanish from the grid.
       ...booked.map((a) => colomboTimeLabel(a.startUtc)),
+      // And times held for the waitlist, which the availability listing leaves out too.
+      ...offered.flatMap((entry) => (entry.offeredStartUtc ? [colomboTimeLabel(entry.offeredStartUtc)] : [])),
     ]);
     return [...times].sort();
-  }, [slots, booked]);
+  }, [slots, booked, offered]);
+
+  /** `${slotDate}|${HH:mm}` → the waitlist entry a slot there is held for (SCRUM-37). */
+  const offeredIndex = useMemo(() => {
+    const map = new Map<string, WaitlistEntry>();
+    offered.forEach((entry) => {
+      if (entry.offeredStartUtc) map.set(`${entry.slotDate}|${colomboTimeLabel(entry.offeredStartUtc)}`, entry);
+    });
+    return map;
+  }, [offered]);
 
   /** `${slotDate}|${HH:mm}` → the appointment booked there. */
   const bookedIndex = useMemo(() => {
@@ -517,6 +537,23 @@ export const AppointmentsPage: React.FC = () => {
                               {appointment.patientNumber && (
                                 <span className="slot-chip-number">{appointment.patientNumber}</span>
                               )}
+                            </div>
+                          </td>
+                        );
+                      }
+                      const offer = offeredIndex.get(`${toDateOnly(day)}|${time}`);
+                      if (offer) {
+                        return (
+                          <td key={day.toISOString()} className="schedule-cell">
+                            <div
+                              className="slot-chip slot-chip--patient slot-chip--offered"
+                              data-testid="offered-slot"
+                              title={`Held for ${offer.patientName ?? 'a waitlisted patient'}${
+                                offer.offerExpiresAtUtc ? ` until ${colomboTimeLabel(offer.offerExpiresAtUtc)}` : ''
+                              } — see the Waitlist page`}
+                            >
+                              <span className="slot-chip-patient">Offered</span>
+                              <span className="slot-chip-number">{offer.patientName ?? 'Waitlist'}</span>
                             </div>
                           </td>
                         );

@@ -77,11 +77,15 @@ describe('the booking token store (SCRUM-34)', () => {
     expect(getBookingToken()).toBeNull();
   });
 
-  it('claims only booking, reading your own bookings, and changing your own bookings', () => {
+  it('claims only booking, the waitlist, and reading and changing your own of either', () => {
     expect(BOOKING_TOKEN_ROUTES).toEqual([
       { method: 'post', path: '/appointment/api/appointments' },
       { method: 'get', path: '/appointment/api/appointments/mine' },
       { method: 'put', pattern: /^\/appointment\/api\/appointments\/mine\/[^/]+\/(cancel|reschedule)$/ },
+      { method: 'post', path: '/appointment/api/waitlist' },
+      { method: 'get', path: '/appointment/api/waitlist/mine' },
+      { method: 'put', pattern: /^\/appointment\/api\/waitlist\/mine\/[^/]+\/(accept|decline)$/ },
+      { method: 'delete', pattern: /^\/appointment\/api\/waitlist\/mine\/[^/]+$/ },
     ]);
 
     expect(isBookingTokenRequest('post', '/appointment/api/appointments')).toBe(true);
@@ -115,6 +119,33 @@ describe('the booking token store (SCRUM-34)', () => {
     expect(isBookingTokenRequest('put', '/appointment/api/appointments/mine/a/b/cancel')).toBe(false);
     expect(isBookingTokenRequest('put', '/evil/appointment/api/appointments/mine/a-1/cancel')).toBe(false);
     expect(isBookingTokenRequest('post', '/appointment/api/appointments/mine/a-1/cancel')).toBe(false);
+  });
+
+  it('sends it when a patient joins, reads or answers their own waitlist (SCRUM-37)', () => {
+    expect(isBookingTokenRequest('post', '/appointment/api/waitlist')).toBe(true);
+    expect(isBookingTokenRequest('get', '/appointment/api/waitlist/mine')).toBe(true);
+    expect(isBookingTokenRequest('put', '/appointment/api/waitlist/mine/w-1/accept')).toBe(true);
+    expect(isBookingTokenRequest('PUT', '/appointment/api/waitlist/mine/w-1/decline')).toBe(true);
+    expect(isBookingTokenRequest('delete', '/appointment/api/waitlist/mine/w-1')).toBe(true);
+  });
+
+  it('keeps it off the front desk waitlist, even on the look-alike paths', () => {
+    // GET on the join path is the staff list; {id}/… are the front desk answering for a patient.
+    expect(isBookingTokenRequest('get', '/appointment/api/waitlist')).toBe(false);
+    expect(isBookingTokenRequest('get', '/appointment/api/waitlist?from=2026-09-23&to=2026-10-06')).toBe(false);
+    expect(isBookingTokenRequest('get', '/appointment/api/waitlist/w-1')).toBe(false);
+    expect(isBookingTokenRequest('put', '/appointment/api/waitlist/w-1/accept')).toBe(false);
+    expect(isBookingTokenRequest('put', '/appointment/api/waitlist/w-1/decline')).toBe(false);
+    expect(isBookingTokenRequest('delete', '/appointment/api/waitlist/w-1')).toBe(false);
+    // Anchored at both ends and one segment wide.
+    expect(isBookingTokenRequest('put', '/appointment/api/waitlist/mine/w-1/remove')).toBe(false);
+    expect(isBookingTokenRequest('put', '/appointment/api/waitlist/mine/w-1/accept/extra')).toBe(false);
+    expect(isBookingTokenRequest('delete', '/appointment/api/waitlist/mine/w-1/extra')).toBe(false);
+    expect(isBookingTokenRequest('delete', '/appointment/api/waitlist/mine')).toBe(false);
+    expect(isBookingTokenRequest('delete', '/evil/appointment/api/waitlist/mine/w-1')).toBe(false);
+    expect(isBookingTokenRequest('post', '/appointment/api/waitlist/mine/w-1/accept')).toBe(false);
+    // The public days read needs no credential.
+    expect(isBookingTokenRequest('get', '/appointment/api/public/booking/days')).toBe(false);
   });
 
   it('keeps the staff appointment list, on the same path as booking, on the staff token', () => {

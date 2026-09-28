@@ -18,6 +18,10 @@ interface SlotPickerProps {
   onDoctorChange: (doctorId: string) => void;
   onSelectDate: (date: string) => void;
   onPickSlot: (slot: PublicSlot) => void;
+  /** The doctor's fully booked days, which can be chosen to join the waitlist (SCRUM-37). */
+  fullDates?: readonly string[];
+  /** The waitlist, shown in place of the times when a full day is chosen. */
+  renderFullDay?: (date: string) => React.ReactNode;
 }
 
 /**
@@ -30,6 +34,8 @@ interface SlotPickerProps {
  * can see the doctor's pattern rather than a list with unexplained gaps. Times are only ever the
  * free ones: the public listing does not say which times are taken, deliberately, so there is no
  * "unavailable time" to draw. Both live in `SlotTimeGrid`, which rescheduling reuses.
+ *
+ * A fully booked day is the exception (SCRUM-37): it can be chosen, and offers the waitlist.
  */
 const SlotPicker: React.FC<SlotPickerProps> = ({
   specializations,
@@ -46,6 +52,8 @@ const SlotPicker: React.FC<SlotPickerProps> = ({
   onDoctorChange,
   onSelectDate,
   onPickSlot,
+  fullDates,
+  renderFullDay,
 }) => {
   return (
     <div className="bk-picker" data-testid="booking-slot-picker">
@@ -129,6 +137,8 @@ const SlotPicker: React.FC<SlotPickerProps> = ({
             onSelectDate={onSelectDate}
             onPickSlot={onPickSlot}
             numbered
+            fullDates={fullDates}
+            renderFullDay={renderFullDay}
           />
         </section>
       )}

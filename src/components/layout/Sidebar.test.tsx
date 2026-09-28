@@ -124,3 +124,19 @@ describe('Sidebar booked-appointments tab', () => {
     expect(screen.queryByRole('link', { name: 'Booked Appointments' })).not.toBeInTheDocument();
   });
 });
+
+describe('Sidebar waitlist tab (SCRUM-37)', () => {
+  it('is offered to the same roles as Booked Appointments, since it names patients', () => {
+    for (const role of ['Admin', 'Receptionist', 'Doctor']) {
+      renderAs(role);
+      expect(screen.getByRole('link', { name: 'Waitlist' })).toHaveAttribute('href', '/appointments/waitlist');
+      document.body.innerHTML = '';
+    }
+  });
+
+  it.each(['Nurse', 'Patient'])('is hidden from %s', (role) => {
+    renderAs(role);
+
+    expect(screen.queryByRole('link', { name: 'Waitlist' })).not.toBeInTheDocument();
+  });
+});

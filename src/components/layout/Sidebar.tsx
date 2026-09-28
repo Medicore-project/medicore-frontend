@@ -32,6 +32,7 @@ const navItems: Array<{
   { name: 'Patients', path: '/patients', allowedRoles: PATIENT_READER_ROLES },
   { name: 'Appointments', path: '/appointments', end: true, allowedRoles: SCHEDULE_READER_ROLES },
   { name: 'Booked Appointments', path: '/appointments/booked', allowedRoles: BOOKED_LIST_ROLES },
+  { name: 'Waitlist', path: '/appointments/waitlist', allowedRoles: BOOKED_LIST_ROLES },
   { name: 'Book Appointment', path: '/appointments/book', allowedRoles: BOOKING_ROLES },
   { name: 'Doctor Leave', path: '/appointments/leave', allowedRoles: LEAVE_READER_ROLES },
   { name: 'Audit Reports', path: '/reports/audit', allowedRoles: ['Admin'] },
