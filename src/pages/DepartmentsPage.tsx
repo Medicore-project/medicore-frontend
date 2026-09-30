@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
+import AssignedStaffPanel from '../components/AssignedStaffPanel';
+import { useAuth } from '../contexts/AuthContext';
+import { canManageOrganization } from '../utils/permissions';
 
 export interface Department {
   id: string | number;
@@ -11,7 +14,11 @@ export interface Department {
 }
 
 export const DepartmentsPage: React.FC = () => {
+  const { user } = useAuth();
+  const canManage = canManageOrganization(user?.role);
+
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [expandedId, setExpandedId] = useState<string | number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -165,9 +172,13 @@ export const DepartmentsPage: React.FC = () => {
       <div className="page-header">
         <div>
           <h1>Departments</h1>
-          <p className="page-subtitle">Manage hospital departments and units</p>
+          <p className="page-subtitle">
+            {canManage
+              ? 'Manage hospital departments and units. Select a department to see its staff.'
+              : 'Hospital departments and units. Select a department to see its staff.'}
+          </p>
         </div>
-        {!isAdding && (
+        {canManage && !isAdding && (
           <button
             type="button"
             className="btn btn-primary"
@@ -266,17 +277,21 @@ export const DepartmentsPage: React.FC = () => {
           </div>
         ) : departments.length === 0 ? (
           <div className="table-empty">
-            <p>No departments found. Click &quot;Add Department&quot; to create one.</p>
+            <p>
+              {canManage
+                ? 'No departments found. Click "Add Department" to create one.'
+                : 'No departments found.'}
+            </p>
           </div>
         ) : (
           <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: '25%' }}>Name</th>
-                  <th style={{ width: '40%' }}>Description</th>
+                  <th style={{ width: canManage ? '25%' : '30%' }}>Name</th>
+                  <th style={{ width: canManage ? '40%' : '50%' }}>Description</th>
                   <th style={{ width: '15%' }}>Status</th>
-                  <th style={{ width: '20%', textAlign: 'right' }}>Actions</th>
+                  {canManage && <th style={{ width: '20%', textAlign: 'right' }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -339,37 +354,62 @@ export const DepartmentsPage: React.FC = () => {
                     );
                   }
 
+                  const isExpanded = expandedId === dept.id;
+
                   return (
-                    <tr key={dept.id}>
-                      <td className="font-semibold">{dept.name}</td>
-                      <td className="text-muted">{dept.description || '—'}</td>
-                      <td>
-                        <span
-                          className={`badge ${dept.isActive ? 'badge-success' : 'badge-inactive'}`}
-                        >
-                          {dept.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div className="action-buttons">
+                    <React.Fragment key={dept.id}>
+                      <tr className={isExpanded ? 'expanded-row' : undefined}>
+                        <td>
                           <button
                             type="button"
-                            className="btn btn-sm btn-outline"
-                            onClick={() => startEdit(dept)}
+                            className="row-expand-toggle"
+                            onClick={() => setExpandedId(isExpanded ? null : dept.id)}
+                            aria-expanded={isExpanded}
                           >
-                            Edit
+                            <span className="row-expand-caret" aria-hidden="true">
+                              {isExpanded ? '▾' : '▸'}
+                            </span>
+                            {dept.name}
                           </button>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-danger-outline"
-                            onClick={() => handleDelete(dept.id)}
-                            disabled={deletingId === dept.id}
+                        </td>
+                        <td className="text-muted">{dept.description || '—'}</td>
+                        <td>
+                          <span
+                            className={`badge ${dept.isActive ? 'badge-success' : 'badge-inactive'}`}
                           >
-                            {deletingId === dept.id ? 'Deleting...' : 'Delete'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                            {dept.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        {canManage && (
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="action-buttons">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline"
+                                onClick={() => startEdit(dept)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger-outline"
+                                onClick={() => handleDelete(dept.id)}
+                                disabled={deletingId === dept.id}
+                              >
+                                {deletingId === dept.id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                      {isExpanded && (
+                        <tr className="assigned-staff-row">
+                          <td colSpan={canManage ? 4 : 3}>
+                            <AssignedStaffPanel departmentId={dept.id} label={dept.name} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

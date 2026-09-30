@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { getBookingToken, isBookingTokenRequest } from './bookingToken';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -29,10 +30,20 @@ const processQueue = (error: Error | AxiosError | null, token: string | null = n
 
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Booking is the one path that may be reached by a patient with no account, so it takes the
+    // booking token when there is one. Everything else keeps using the signed-in staff token —
+    // see BOOKING_TOKEN_ROUTES for why this is an allow-list and not "whichever token exists".
+    const bookingToken = isBookingTokenRequest(config.method, config.url) ? getBookingToken() : null;
+
+    if (bookingToken) {
+      config.headers.Authorization = `Bearer ${bookingToken}`;
+    } else {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
+
     config.headers['X-Correlation-Id'] = crypto.randomUUID();
     return config;
   },
@@ -47,7 +58,17 @@ apiClient.interceptors.response.use(
     if (originalRequest.url?.includes('/auth/login')) {
       return Promise.reject(error);
     }
-    
+
+    // A booking token is minted by /api/patients/identify and cannot be refreshed — an anonymous
+    // visitor has no refresh token. Falling through to the refresh path below would run
+    // `localStorage.clear()` and hard-redirect to /login: useless for a patient who has no account,
+    // and destructive for a receptionist whose *staff* session would be thrown away because their
+    // *booking* token expired. The booking flow handles its own 401 by asking the patient to
+    // identify again.
+    if (isBookingTokenRequest(originalRequest.method, originalRequest.url)) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise<string | null>((resolve, reject) => {

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
+import AssignedStaffPanel from '../components/AssignedStaffPanel';
+import { useAuth } from '../contexts/AuthContext';
+import { canManageOrganization } from '../utils/permissions';
 
 export interface Specialization {
   id: string | number;
@@ -11,7 +14,11 @@ export interface Specialization {
 }
 
 export const SpecializationsPage: React.FC = () => {
+  const { user } = useAuth();
+  const canManage = canManageOrganization(user?.role);
+
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [expandedId, setExpandedId] = useState<string | number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -165,9 +172,13 @@ export const SpecializationsPage: React.FC = () => {
       <div className="page-header">
         <div>
           <h1>Specializations</h1>
-          <p className="page-subtitle">Manage medical specializations and domains</p>
+          <p className="page-subtitle">
+            {canManage
+              ? 'Manage medical specializations and domains. Select one to see who holds it.'
+              : 'Medical specializations and domains. Select one to see who holds it.'}
+          </p>
         </div>
-        {!isAdding && (
+        {canManage && !isAdding && (
           <button
             type="button"
             className="btn btn-primary"
@@ -266,17 +277,21 @@ export const SpecializationsPage: React.FC = () => {
           </div>
         ) : specializations.length === 0 ? (
           <div className="table-empty">
-            <p>No specializations found. Click &quot;Add Specialization&quot; to create one.</p>
+            <p>
+              {canManage
+                ? 'No specializations found. Click "Add Specialization" to create one.'
+                : 'No specializations found.'}
+            </p>
           </div>
         ) : (
           <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: '25%' }}>Name</th>
-                  <th style={{ width: '40%' }}>Description</th>
+                  <th style={{ width: canManage ? '25%' : '30%' }}>Name</th>
+                  <th style={{ width: canManage ? '40%' : '50%' }}>Description</th>
                   <th style={{ width: '15%' }}>Status</th>
-                  <th style={{ width: '20%', textAlign: 'right' }}>Actions</th>
+                  {canManage && <th style={{ width: '20%', textAlign: 'right' }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -339,37 +354,62 @@ export const SpecializationsPage: React.FC = () => {
                     );
                   }
 
+                  const isExpanded = expandedId === spec.id;
+
                   return (
-                    <tr key={spec.id}>
-                      <td className="font-semibold">{spec.name}</td>
-                      <td className="text-muted">{spec.description || '—'}</td>
-                      <td>
-                        <span
-                          className={`badge ${spec.isActive ? 'badge-success' : 'badge-inactive'}`}
-                        >
-                          {spec.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div className="action-buttons">
+                    <React.Fragment key={spec.id}>
+                      <tr className={isExpanded ? 'expanded-row' : undefined}>
+                        <td>
                           <button
                             type="button"
-                            className="btn btn-sm btn-outline"
-                            onClick={() => startEdit(spec)}
+                            className="row-expand-toggle"
+                            onClick={() => setExpandedId(isExpanded ? null : spec.id)}
+                            aria-expanded={isExpanded}
                           >
-                            Edit
+                            <span className="row-expand-caret" aria-hidden="true">
+                              {isExpanded ? '▾' : '▸'}
+                            </span>
+                            {spec.name}
                           </button>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-danger-outline"
-                            onClick={() => handleDelete(spec.id)}
-                            disabled={deletingId === spec.id}
+                        </td>
+                        <td className="text-muted">{spec.description || '—'}</td>
+                        <td>
+                          <span
+                            className={`badge ${spec.isActive ? 'badge-success' : 'badge-inactive'}`}
                           >
-                            {deletingId === spec.id ? 'Deleting...' : 'Delete'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                            {spec.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        {canManage && (
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="action-buttons">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline"
+                                onClick={() => startEdit(spec)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger-outline"
+                                onClick={() => handleDelete(spec.id)}
+                                disabled={deletingId === spec.id}
+                              >
+                                {deletingId === spec.id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                      {isExpanded && (
+                        <tr className="assigned-staff-row">
+                          <td colSpan={canManage ? 4 : 3}>
+                            <AssignedStaffPanel specialization={spec.name} label={spec.name} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

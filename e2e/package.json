@@ -1,0 +1,14 @@
+{
+  "name": "medicore-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Selenium end-to-end tests for the MediCore booking flow (SCRUM-34).",
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "mocha": "^11.7.4",
+    "selenium-webdriver": "^4.40.0"
+  }
+}
