@@ -22,7 +22,7 @@ import {
 import { visibleItems } from '../components/layout/navigation';
 import { colomboTimeLabel } from '../api/appointments';
 import { useDashboardData } from '../hooks/useDashboardData';
-import { colomboHour, DAYS_BACK, greetingFor, summarise } from '../utils/dashboard';
+import { colomboHour, greetingFor, summarise } from '../utils/dashboard';
 import { fullDateLabel } from '../utils/bookingLabels';
 import { FRONT_DESK_ROLES } from '../utils/permissions';
 
