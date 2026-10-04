@@ -22,7 +22,7 @@ import {
 import { visibleItems } from '../components/layout/navigation';
 import { colomboTimeLabel } from '../api/appointments';
 import { useDashboardData } from '../hooks/useDashboardData';
-import { colomboHour, DAYS_BACK, greetingFor, summarise } from '../utils/dashboard';
+import { colomboHour, greetingFor, summarise } from '../utils/dashboard';
 import { fullDateLabel } from '../utils/bookingLabels';
 import { FRONT_DESK_ROLES } from '../utils/permissions';
 
@@ -77,7 +77,6 @@ export const DashboardPage: React.FC = () => {
     return `${own} ${summary.todayActive} appointment${summary.todayActive === 1 ? '' : 's'} today.${next}`;
   })();
 
-  const trendTotals = summary.trend.map((p) => p.Booked + p.Completed + p.NoShow);
   const workspaceCards = pages.filter((page) => page.path !== '/dashboard');
 
   return (
@@ -131,7 +130,6 @@ export const DashboardPage: React.FC = () => {
             tone="blue"
             note={`${summary.todayCounts.Completed} completed · ${summary.todayCounts.Booked} still booked`}
             to={reachable('/appointments/booked') ? '/appointments/booked' : undefined}
-            spark={trendTotals.slice(0, DAYS_BACK + 1)}
           />
         )}
         {plan.appointments && (
@@ -144,7 +142,6 @@ export const DashboardPage: React.FC = () => {
             tone="violet"
             note={summary.next ? `Next today at ${colomboTimeLabel(summary.next.startUtc)}` : 'Booked for the next six days'}
             to={reachable('/appointments') ? '/appointments' : undefined}
-            spark={trendTotals.slice(DAYS_BACK)}
           />
         )}
         {plan.waitlist && (

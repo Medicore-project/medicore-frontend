@@ -506,12 +506,12 @@ describe('BookingFlow (SCRUM-34)', () => {
 
     await identifyAndPickASlot();
 
-    expect(await screen.findByTestId('billing-notice')).toHaveTextContent('Sprint 4');
+    expect(await screen.findByTestId('billing-notice')).toHaveTextContent('draft invoice');
 
     click('Confirm Appointment');
 
     await screen.findByTestId('booking-confirmation');
-    expect(screen.getByTestId('billing-notice')).toHaveTextContent('Sprint 4');
+    expect(screen.getByTestId('billing-notice')).toHaveTextContent('becomes payable');
     expect(screen.getByTestId('billing-notice')).toHaveTextContent('GEN-CONSULT');
   });
 
