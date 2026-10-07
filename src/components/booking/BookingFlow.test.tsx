@@ -89,7 +89,7 @@ const APPOINTMENT = {
   endUtc: `${tomorrow()}T04:00:00Z`,
   slotDate: tomorrow(),
   durationMinutes: 30,
-  serviceCode: 'GEN-CONSULT',
+  serviceCode: 'SPEC-CONSULT',
   status: 'Booked',
   createdAt: `${tomorrow()}T00:00:00Z`,
 };
@@ -497,8 +497,22 @@ describe('BookingFlow (SCRUM-34)', () => {
     expect(await screen.findByTestId('booking-confirmation')).toHaveTextContent(
       'Your appointment is confirmed',
     );
-    expect(api.appointment.book).toHaveBeenCalledWith('slot-1', 'GEN-CONSULT');
+    expect(api.appointment.book).toHaveBeenCalledWith('slot-1', 'SPEC-CONSULT');
     expect(api.identity.publicRegister).not.toHaveBeenCalled();
+  });
+
+  it('classifies a doctor without a specialization as a general consultation', async () => {
+    api.publicBooking.doctors.mockResolvedValue([{ ...DOCTOR, specialization: '' }]);
+    api.appointment.book.mockResolvedValue({ ...APPOINTMENT, serviceCode: 'GEN-CONSULT' });
+    render(<BookingFlow />);
+
+    await identifyAndPickASlot();
+
+    expect(await screen.findByTestId('billing-notice')).toHaveTextContent('GEN-CONSULT');
+    click('Confirm Appointment');
+
+    await screen.findByTestId('booking-confirmation');
+    expect(api.appointment.book).toHaveBeenCalledWith('slot-1', 'GEN-CONSULT');
   });
 
   it('warns that billing has not happened, in the summary and on the confirmation', async () => {
@@ -512,7 +526,7 @@ describe('BookingFlow (SCRUM-34)', () => {
 
     await screen.findByTestId('booking-confirmation');
     expect(screen.getByTestId('billing-notice')).toHaveTextContent('becomes payable');
-    expect(screen.getByTestId('billing-notice')).toHaveTextContent('GEN-CONSULT');
+    expect(screen.getByTestId('billing-notice')).toHaveTextContent('SPEC-CONSULT');
   });
 
   // ── Registration problems ───────────────────────────────────────────────────
@@ -690,7 +704,7 @@ describe('BookingFlow — the waitlist (SCRUM-37)', () => {
       expect(api.waitlist.join).toHaveBeenCalledWith({
         doctorId: 'doctor-1',
         date: dayAfterTomorrow(),
-        serviceCode: 'GEN-CONSULT',
+        serviceCode: 'SPEC-CONSULT',
       }),
     );
     const card = await screen.findByTestId('your-waitlist');
