@@ -21,6 +21,8 @@ import DoctorLeavePage from './pages/DoctorLeavePage';
 import ClinicAppointmentsPage from './pages/ClinicAppointmentsPage';
 import WaitlistPage from './pages/WaitlistPage';
 import AppointmentDetailPage from './pages/AppointmentDetailPage';
+import InvoiceDetailPage from './pages/InvoiceDetailPage';
+import ServiceTariffsPage from './pages/ServiceTariffsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -76,6 +78,7 @@ export const App: React.FC = () => {
         <Route element={<AppLayout />}>
           <Route path="/departments" element={<DepartmentsPage />} />
           <Route path="/specializations" element={<SpecializationsPage />} />
+          <Route path="/billing/tariffs" element={<ServiceTariffsPage />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[...PATIENT_READER_ROLES]} />}>
@@ -87,6 +90,7 @@ export const App: React.FC = () => {
       <Route element={<ProtectedRoute allowedRoles={[...FRONT_DESK_ROLES]} />}>
         <Route element={<AppLayout />}>
           <Route path="/patients/register" element={<PatientRegistrationPage />} />
+          <Route path="/billing/invoices/:invoiceId" element={<InvoiceDetailPage />} />
         </Route>
       </Route>
       {/* "Who is booked" — the front desk, and doctors, who open it on their own bookings. One

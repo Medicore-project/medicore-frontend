@@ -5,6 +5,7 @@ import {
   CalendarIcon,
   CalendarPlusIcon,
   ClockIcon,
+  DocumentIcon,
   GridIcon,
   LayersIcon,
   ListIcon,
@@ -78,6 +79,12 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: 'Billing',
+    items: [
+      { name: 'Service Tariffs', path: '/billing/tariffs', allowedRoles: FRONT_DESK_ROLES, icon: DocumentIcon, description: 'Effective-dated service prices and history' },
+    ],
+  },
+  {
     title: 'Reports',
     items: [
       { name: 'Audit Reports', path: '/reports/audit', allowedRoles: ['Admin'], icon: ShieldIcon, description: 'Who changed what, and when' },
@@ -113,6 +120,7 @@ const DETAIL_TITLES: Array<{ pattern: RegExp; title: string; parent: string }> =
   { pattern: /^\/patients\/[^/]+$/, title: 'Patient profile', parent: 'Patients' },
   { pattern: /^\/staff\/[^/]+$/, title: 'Staff member', parent: 'Staff' },
   { pattern: /^\/appointments\/[^/]+$/, title: 'Appointment', parent: 'Booked Appointments' },
+  { pattern: /^\/billing\/invoices\/[^/]+$/, title: 'Invoice', parent: 'Billing' },
 ];
 
 /**
