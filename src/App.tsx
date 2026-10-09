@@ -23,6 +23,9 @@ import WaitlistPage from './pages/WaitlistPage';
 import AppointmentDetailPage from './pages/AppointmentDetailPage';
 import InvoiceDetailPage from './pages/InvoiceDetailPage';
 import ServiceTariffsPage from './pages/ServiceTariffsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import RevenueReportPage from './pages/RevenueReportPage';
+import OutstandingReportPage from './pages/OutstandingReportPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -70,6 +73,9 @@ export const App: React.FC = () => {
           <Route path="/reports/audit" element={<AuditReportPage />} />
           <Route path="/reports/demographics" element={<DemographicsReportPage />} />
           <Route path="/reports/utilisation" element={<UtilisationReportPage />} />
+          <Route path="/reports/revenue" element={<RevenueReportPage />} />
+          <Route path="/reports/outstanding" element={<OutstandingReportPage />} />
+          <Route path="/billing/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>
       {/* Readable by the front desk, writable only by Admin — the pages gate their own

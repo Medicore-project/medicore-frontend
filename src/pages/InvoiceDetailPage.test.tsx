@@ -107,4 +107,17 @@ describe('InvoiceDetailPage (SCRUM-44)', () => {
     expect(within(screen.getByRole('region', { name: 'Payment history' })).getByText('Card')).toBeInTheDocument();
     expect(screen.getByLabelText('Amount (LKR)')).toHaveValue(1500);
   });
+
+  it('shows payment controls when automatic issuance changes a draft to payable', async () => {
+    api.get.mockResolvedValueOnce(invoice({
+      status: 'Draft', amountPaid: 0, balanceDue: 2500, payments: [], finalizedAtUtc: null,
+    })).mockResolvedValueOnce(invoice({
+      status: 'Payable', amountPaid: 0, balanceDue: 2500, payments: [],
+    }));
+    renderPage();
+    await screen.findByText('Payments are unavailable while this invoice is Draft.');
+
+    expect(await screen.findByLabelText('Amount (LKR)', {}, { timeout: 6500 })).toHaveValue(2500);
+    expect(api.get).toHaveBeenCalledTimes(2);
+  }, 8000);
 });

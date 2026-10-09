@@ -59,6 +59,27 @@ const InvoiceDetailPage: React.FC = () => {
     };
   }, [invoiceId]);
 
+  useEffect(() => {
+    if (!invoiceId || invoice?.status !== 'Draft') return;
+    let cancelled = false;
+    const timer = window.setInterval(() => {
+      void invoiceApi.get(invoiceId).then((updated) => {
+        if (cancelled) return;
+        setInvoice(updated);
+        if (updated.status === 'Payable' && updated.balanceDue > 0) {
+          setAmount(updated.balanceDue.toFixed(2));
+          setError(null);
+        }
+      }).catch(() => {
+        // The initial load already reports errors; a transient poll may retry.
+      });
+    }, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [invoiceId, invoice?.status]);
+
   const suggestedAmount = useMemo(
     () => (invoice && invoice.balanceDue > 0 ? invoice.balanceDue.toFixed(2) : ''),
     [invoice],
