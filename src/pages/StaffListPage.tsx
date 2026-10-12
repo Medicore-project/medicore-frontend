@@ -4,6 +4,7 @@ import { staffApi, type StaffResponse, type StaffListParams } from '../api/staff
 import { departmentsApi, type Department } from '../api/departments';
 import StaffFormModal from './StaffFormModal';
 import RoleAssignmentModal from './RoleAssignmentModal';
+import ChangePasswordModal from './ChangePasswordModal';
 
 const ROLES = ['Admin', 'Doctor', 'Nurse', 'Receptionist', 'Patient'];
 const PAGE_SIZE = 10;
@@ -39,6 +40,7 @@ export const StaffListPage: React.FC = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingStaff, setEditingStaff] = useState<StaffResponse | null>(null);
   const [assigningRoleStaff, setAssigningRoleStaff] = useState<StaffResponse | null>(null);
+  const [changingPasswordStaff, setChangingPasswordStaff] = useState<StaffResponse | null>(null);
 
   const [deactivatingId, setDeactivatingId] = useState<string | number | null>(null);
 
@@ -136,6 +138,24 @@ export const StaffListPage: React.FC = () => {
 
   const closeAssignRole = () => {
     setAssigningRoleStaff(null);
+  };
+
+  const openChangePassword = (staff: StaffResponse) => {
+    setChangingPasswordStaff(staff);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const closeChangePassword = () => {
+    setChangingPasswordStaff(null);
+  };
+
+  const onChangePasswordSuccess = () => {
+    // Nothing on the list changes, so there is nothing to refetch.
+    setSuccessMessage(
+      `Password changed for ${changingPasswordStaff?.fullName ?? 'the staff member'}. They must sign in again with the new one.`,
+    );
+    closeChangePassword();
   };
 
   const onModalSuccess = () => {
@@ -270,6 +290,13 @@ export const StaffListPage: React.FC = () => {
                         >
                           Assign Role
                         </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline"
+                          onClick={() => openChangePassword(s)}
+                        >
+                          Change Password
+                        </button>
                         {s.isActive && (
                           <button
                             type="button"
@@ -338,6 +365,14 @@ export const StaffListPage: React.FC = () => {
           staff={assigningRoleStaff}
           onSuccess={onAssignRoleSuccess}
           onClose={closeAssignRole}
+        />
+      )}
+
+      {changingPasswordStaff && (
+        <ChangePasswordModal
+          staff={changingPasswordStaff}
+          onSuccess={onChangePasswordSuccess}
+          onClose={closeChangePassword}
         />
       )}
     </div>

@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   notificationsApi,
-  type CreateNotificationTemplateRequest,
   type NotificationLog,
   type NotificationTemplate,
   type UpdateNotificationTemplateRequest,
 } from '../api/notifications';
 import { extractErrorMessage } from '../utils/apiError';
 
+// Templates are edited here, never added: the billing service only ever sends the ones it was
+// built with, so a template created from this page would be one nothing uses.
 type TemplateForm = {
-  code: string;
   name: string;
   subjectTemplate: string;
   bodyTemplate: string;
@@ -17,7 +17,6 @@ type TemplateForm = {
 };
 
 const emptyForm = (): TemplateForm => ({
-  code: '',
   name: '',
   subjectTemplate: '',
   bodyTemplate: '',
@@ -37,7 +36,6 @@ const NotificationsPage = () => {
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [logs, setLogs] = useState<NotificationLog[]>([]);
   const [editing, setEditing] = useState<NotificationTemplate | null>(null);
-  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<TemplateForm>(emptyForm);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -65,59 +63,38 @@ const NotificationsPage = () => {
     void load();
   }, [load]);
 
-  const startCreate = () => {
-    setEditing(null);
-    setForm(emptyForm());
-    setShowForm(true);
-    setError(null);
-    setSuccess(null);
-  };
-
   const startEdit = (template: NotificationTemplate) => {
     setEditing(template);
     setForm({
-      code: template.code,
       name: template.name,
       subjectTemplate: template.subjectTemplate,
       bodyTemplate: template.bodyTemplate,
       isActive: template.isActive,
     });
-    setShowForm(true);
     setError(null);
     setSuccess(null);
   };
 
   const closeForm = () => {
-    setShowForm(false);
     setEditing(null);
     setForm(emptyForm());
   };
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!editing) return;
     setIsSaving(true);
     setError(null);
     setSuccess(null);
     try {
-      if (editing) {
-        const request: UpdateNotificationTemplateRequest = {
-          name: form.name.trim(),
-          subjectTemplate: form.subjectTemplate.trim(),
-          bodyTemplate: form.bodyTemplate.trim(),
-          isActive: form.isActive,
-        };
-        await notificationsApi.updateTemplate(editing.notificationTemplateId, request);
-        setSuccess(`${editing.code} was updated.`);
-      } else {
-        const request: CreateNotificationTemplateRequest = {
-          code: form.code.trim().toUpperCase(),
-          name: form.name.trim(),
-          subjectTemplate: form.subjectTemplate.trim(),
-          bodyTemplate: form.bodyTemplate.trim(),
-        };
-        await notificationsApi.createTemplate(request);
-        setSuccess(`${request.code} was created.`);
-      }
+      const request: UpdateNotificationTemplateRequest = {
+        name: form.name.trim(),
+        subjectTemplate: form.subjectTemplate.trim(),
+        bodyTemplate: form.bodyTemplate.trim(),
+        isActive: form.isActive,
+      };
+      await notificationsApi.updateTemplate(editing.notificationTemplateId, request);
+      setSuccess(`${editing.code} was updated.`);
       closeForm();
       await load();
     } catch (requestError) {
@@ -147,22 +124,21 @@ const NotificationsPage = () => {
           <h1>Email notifications</h1>
           <p className="page-subtitle">Templates and delivery results for welcome, booking and payment emails.</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={startCreate}>+ Add template</button>
       </div>
 
       {error && <div className="alert alert-danger" role="alert">{error}</div>}
       {success && <div className="alert alert-success" role="status">{success}</div>}
 
-      {showForm && (
+      {editing && (
         <section className="card notification-form-card" aria-label="Notification template form">
-          <div className="card-header"><h2>{editing ? `Edit ${editing.code}` : 'New notification template'}</h2></div>
+          <div className="card-header"><h2>Edit {editing.code}</h2></div>
           <form onSubmit={(event) => void save(event)}>
             <div className="notification-form-grid">
-              <label>Code<input value={form.code} disabled={Boolean(editing)} required maxLength={80} pattern="[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*" onChange={(event) => setForm({ ...form, code: event.target.value })} /></label>
+              <label>Code<input value={editing.code} disabled /></label>
               <label>Name<input value={form.name} required maxLength={150} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
               <label className="notification-wide">Subject<input value={form.subjectTemplate} required maxLength={300} onChange={(event) => setForm({ ...form, subjectTemplate: event.target.value })} /></label>
               <label className="notification-wide">Body<textarea value={form.bodyTemplate} required maxLength={10000} rows={6} onChange={(event) => setForm({ ...form, bodyTemplate: event.target.value })} /></label>
-              {editing && <label className="notification-active"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} /> Active</label>}
+              <label className="notification-active"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} /> Active</label>
             </div>
             <div className="form-actions">
               <button type="button" className="btn btn-secondary" onClick={closeForm}>Cancel</button>

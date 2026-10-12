@@ -1,8 +1,8 @@
 .tariff-page { max-width: 1240px; }
 .tariff-form-note { margin-top: 5px; color: var(--text-muted); font-size: .84rem; }
-.tariff-form-grid { display: grid; grid-template-columns: 1fr 2fr 1fr 120px 1.4fr; gap: 16px; }
+.tariff-form-grid { display: grid; grid-template-columns: 1.4fr 2fr 1fr 120px 1.4fr; gap: 16px; }
 .tariff-form-grid .form-group { min-width: 0; }
-.tariff-form-grid input { width: 100%; }
+.tariff-form-grid input, .tariff-form-grid select { width: 100%; }
 .tariff-table td { vertical-align: middle; }
 .tariff-table th:last-child, .tariff-table td:last-child { text-align: right; }
 .tariff-description { display: block; margin-top: 4px; color: var(--text-muted); font-size: .78rem; }

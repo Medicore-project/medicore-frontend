@@ -26,6 +26,7 @@ import {
   validatePatientForm,
 } from '../../utils/patientForm';
 import type { PatientFieldErrors, PatientForm } from '../../utils/patientForm';
+import { serviceCodeForDoctor } from '../../utils/serviceCodes';
 import AppointmentTextDialog from '../appointments/AppointmentTextDialog';
 import RescheduleDialog from '../appointments/RescheduleDialog';
 import { CheckIcon } from '../icons/LineIcons';
@@ -39,11 +40,6 @@ import SlotPicker from './SlotPicker';
 import UpcomingAppointments from './UpcomingAppointments';
 import WaitlistJoinCard from './WaitlistJoinCard';
 import YourWaitlist from './YourWaitlist';
-
-/** Mirrors the backend's doctor-owned consultation classification for immediate UI feedback. */
-function consultationServiceCode(doctor: PublicDoctor | null): string {
-  return doctor?.specialization.trim() ? 'SPEC-CONSULT' : 'GEN-CONSULT';
-}
 
 /** The service's limit on a cancellation reason. */
 const MAX_REASON_LENGTH = 500;
@@ -125,7 +121,9 @@ const BookingFlow: React.FC = () => {
   const [isJoining, setIsJoining] = useState(false);
 
   const selectedDoctor = doctors.find((candidate) => candidate.doctorId === doctorId) ?? null;
-  const selectedServiceCode = consultationServiceCode(selectedDoctor);
+  // Mirrors the backend's doctor-owned classification, for immediate feedback; the server
+  // resolves the code itself and its answer is what the confirmation shows.
+  const selectedServiceCode = serviceCodeForDoctor(selectedDoctor?.specialization);
 
   // ── Data loading ────────────────────────────────────────────────────────────
 
