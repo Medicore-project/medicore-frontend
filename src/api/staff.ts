@@ -85,4 +85,8 @@ export const staffApi = {
 
   assignRole: (staffId: string | number, roleId: string | number): Promise<void> =>
     apiClient.post(`/api/staff/${staffId}/roles`, { roleId }).then(() => undefined),
+
+  /** Admin only. Also ends the staff member's existing sessions, so they sign in again. */
+  changePassword: (staffId: string | number, newPassword: string): Promise<void> =>
+    apiClient.put(`/api/staff/${staffId}/password`, { newPassword }).then(() => undefined),
 };

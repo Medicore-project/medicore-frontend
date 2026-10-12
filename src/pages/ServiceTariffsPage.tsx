@@ -5,11 +5,19 @@ import {
   type ServiceTariff,
   type UpdateServiceTariffRequest,
 } from '../api/serviceTariffs';
+import { specializationsApi, type Specialization } from '../api/specializations';
 import { useAuth } from '../contexts/AuthContext';
 import { extractErrorMessage } from '../utils/apiError';
 import { canManageOrganization } from '../utils/permissions';
+import {
+  GENERAL_CONSULTATION,
+  SPECIALIST_CONSULTATION,
+  serviceCodeForSpecialization,
+} from '../utils/serviceCodes';
 
 type TariffForm = {
+  /** The specialization a new tariff is for. Unused when changing a price: the code is kept. */
+  specialization: string;
   serviceCode: string;
   description: string;
   unitPrice: string;
@@ -24,12 +32,17 @@ function localDateTimeInput(date: Date): string {
 
 function initialForm(): TariffForm {
   return {
+    specialization: '',
     serviceCode: '',
     description: '',
     unitPrice: '',
     currency: 'LKR',
     effectiveFrom: localDateTimeInput(new Date()),
   };
+}
+
+function suggestedDescription(specialization: string): string {
+  return specialization ? `${specialization} consultation` : '';
 }
 
 function dateTimeLabel(value: string): string {
@@ -56,10 +69,28 @@ function statusOf(tariff: ServiceTariff): 'Current' | 'Scheduled' | 'Superseded'
   return 'Current';
 }
 
+type SpecializationsState = 'loading' | 'ready' | 'failed';
+
+/** Whose visits a tariff prices. The code alone does not say which doctors it covers. */
+function appliesTo(
+  serviceCode: string,
+  specializationByCode: Map<string, string>,
+  specializationsState: SpecializationsState,
+): string {
+  if (serviceCode === GENERAL_CONSULTATION) return 'Doctors with no specialization';
+  if (serviceCode === SPECIALIST_CONSULTATION) return 'Any specialization without its own tariff';
+  const specialization = specializationByCode.get(serviceCode);
+  if (specialization) return specialization;
+  // Only claim there is no match once the list it would be in has actually arrived.
+  return specializationsState === 'ready' ? 'No matching specialization' : '—';
+}
+
 const ServiceTariffsPage = () => {
   const { user } = useAuth();
   const canManage = canManageOrganization(user?.role);
   const [tariffs, setTariffs] = useState<ServiceTariff[]>([]);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [specializationsState, setSpecializationsState] = useState<SpecializationsState>('loading');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -78,6 +109,24 @@ const ServiceTariffsPage = () => {
     });
     return latest;
   }, [tariffs]);
+
+  // A tariff is tied to its specialization by the code both are named with, so each
+  // specialization is offered once, and only while no tariff — active or not — holds its code:
+  // the billing service refuses a second tariff for a code it has ever seen.
+  const specializationOptions = useMemo(() => {
+    const takenCodes = new Set(tariffs.map((tariff) => tariff.serviceCode));
+    return [...specializations]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((specialization) => {
+        const code = serviceCodeForSpecialization(specialization.name);
+        return { id: String(specialization.id), name: specialization.name, code, taken: takenCodes.has(code) };
+      });
+  }, [specializations, tariffs]);
+
+  const specializationByCode = useMemo(
+    () => new Map(specializationOptions.map((option) => [option.code, option.name])),
+    [specializationOptions],
+  );
 
   const loadTariffs = async () => {
     setIsLoading(true);
@@ -102,6 +151,18 @@ const ServiceTariffsPage = () => {
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
+      });
+    // Separate from the catalogue on purpose: the prices are still worth showing if this fails,
+    // and only adding a tariff needs it.
+    void specializationsApi
+      .list()
+      .then((found) => {
+        if (cancelled) return;
+        setSpecializations(found);
+        setSpecializationsState('ready');
+      })
+      .catch(() => {
+        if (!cancelled) setSpecializationsState('failed');
       });
     return () => {
       cancelled = true;
@@ -128,6 +189,7 @@ const ServiceTariffsPage = () => {
     setEditing(tariff);
     setIsAdding(false);
     setForm({
+      specialization: '',
       serviceCode: tariff.serviceCode,
       description: tariff.description,
       unitPrice: tariff.unitPrice.toFixed(2),
@@ -138,8 +200,24 @@ const ServiceTariffsPage = () => {
     setSuccess(null);
   };
 
+  const chooseSpecialization = (name: string) => {
+    // The description follows the specialization only while it is still the one suggested for
+    // the previous choice, so anything the admin typed is left alone.
+    const wasSuggested = form.description === suggestedDescription(form.specialization);
+    setForm({
+      ...form,
+      specialization: name,
+      serviceCode: name ? serviceCodeForSpecialization(name) : '',
+      description: wasSuggested ? suggestedDescription(name) : form.description,
+    });
+  };
+
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!editing && !form.serviceCode) {
+      setError('Choose the specialization this tariff is for.');
+      return;
+    }
     const price = Number(form.unitPrice);
     if (!Number.isFinite(price) || price <= 0) {
       setError('Enter a unit price greater than zero.');
@@ -162,10 +240,10 @@ const ServiceTariffsPage = () => {
       } else {
         const request: CreateServiceTariffRequest = {
           ...common,
-          serviceCode: form.serviceCode.trim().toUpperCase(),
+          serviceCode: form.serviceCode,
         };
         await serviceTariffApi.create(request);
-        setSuccess(`${request.serviceCode} was added to the catalogue.`);
+        setSuccess(`A tariff for ${form.specialization} (${request.serviceCode}) was added to the catalogue.`);
       }
       closeForm();
       await loadTariffs();
@@ -189,12 +267,22 @@ const ServiceTariffsPage = () => {
     }
   };
 
+  const specializationHelp = specializationsState === 'failed'
+    ? 'Could not load specializations. Reload the page to add a tariff.'
+    : specializationsState === 'loading'
+      ? 'Loading specializations…'
+      : specializations.length === 0
+        ? 'No specializations exist yet. Add one on the Specializations page first.'
+        : form.serviceCode
+          ? `Service code: ${form.serviceCode}`
+          : 'Each specialization has one tariff.';
+
   return (
     <div className="management-page tariff-page">
       <div className="page-header">
         <div>
           <h1>Service tariffs</h1>
-          <p className="page-subtitle">Effective-dated prices used when appointment invoices are issued.</p>
+          <p className="page-subtitle">Effective-dated prices, one per specialization, used when appointment invoices are issued.</p>
         </div>
         {canManage && !isAdding && !editing && (
           <button type="button" className="btn btn-primary" onClick={startCreate}>+ Add tariff</button>
@@ -208,16 +296,32 @@ const ServiceTariffsPage = () => {
         <div className="card add-form-card">
           <div className="card-header">
             <h3>{editing ? `New price for ${editing.serviceCode}` : 'New service tariff'}</h3>
-            {editing && <p className="tariff-form-note">The current price remains in history and already-issued invoices stay unchanged.</p>}
+            {editing
+              ? <p className="tariff-form-note">The current price remains in history and already-issued invoices stay unchanged.</p>
+              : <p className="tariff-form-note">Appointments with a doctor of the chosen specialization are invoiced at this price.</p>}
           </div>
           <form className="inline-form" onSubmit={(event) => void save(event)}>
             <div className="tariff-form-grid">
-              <div className="form-group">
-                <label htmlFor="tariff-code">Service code</label>
-                <input id="tariff-code" value={form.serviceCode} disabled={Boolean(editing)} required maxLength={50}
-                  pattern="[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*"
-                  onChange={(event) => setForm({ ...form, serviceCode: event.target.value })} />
-              </div>
+              {editing ? (
+                <div className="form-group">
+                  <label htmlFor="tariff-code">Service code</label>
+                  <input id="tariff-code" value={form.serviceCode} disabled />
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label htmlFor="tariff-specialization">Specialization</label>
+                  <select id="tariff-specialization" value={form.specialization} required
+                    onChange={(event) => chooseSpecialization(event.target.value)}>
+                    <option value="">-- Select Specialization --</option>
+                    {specializationOptions.map((option) => (
+                      <option key={option.id} value={option.name} disabled={option.taken}>
+                        {option.taken ? `${option.name} (already has a tariff)` : option.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="field-help" data-testid="tariff-specialization-help">{specializationHelp}</p>
+                </div>
+              )}
               <div className="form-group tariff-description-field">
                 <label htmlFor="tariff-description">Description</label>
                 <input id="tariff-description" value={form.description} required maxLength={300}
@@ -257,7 +361,7 @@ const ServiceTariffsPage = () => {
         ) : (
           <div className="table-responsive">
             <table className="data-table tariff-table">
-              <thead><tr><th>Service</th><th>Price</th><th>Effective period</th><th>Status</th>{canManage && <th>Actions</th>}</tr></thead>
+              <thead><tr><th>Service</th><th>Applies to</th><th>Price</th><th>Effective period</th><th>Status</th>{canManage && <th>Actions</th>}</tr></thead>
               <tbody>
                 {tariffs.map((tariff) => {
                   const status = statusOf(tariff);
@@ -265,6 +369,7 @@ const ServiceTariffsPage = () => {
                   return (
                     <tr key={tariff.tariffId}>
                       <td><strong>{tariff.serviceCode}</strong><span className="tariff-description">{tariff.description}</span></td>
+                      <td>{appliesTo(tariff.serviceCode, specializationByCode, specializationsState)}</td>
                       <td className="tariff-price">{money(tariff.unitPrice, tariff.currency)}</td>
                       <td><span>{dateTimeLabel(tariff.effectiveFromUtc)}</span><span className="tariff-description">to {tariff.effectiveToUtc ? dateTimeLabel(tariff.effectiveToUtc) : 'open-ended'}</span></td>
                       <td><span className={`badge tariff-status tariff-status--${status.toLowerCase()}`}>{status}</span></td>
