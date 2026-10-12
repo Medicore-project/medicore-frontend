@@ -1,0 +1,16 @@
+.tariff-page { max-width: 1240px; }
+.tariff-form-note { margin-top: 5px; color: var(--text-muted); font-size: .84rem; }
+.tariff-form-grid { display: grid; grid-template-columns: 1fr 2fr 1fr 120px 1.4fr; gap: 16px; }
+.tariff-form-grid .form-group { min-width: 0; }
+.tariff-form-grid input { width: 100%; }
+.tariff-table td { vertical-align: middle; }
+.tariff-table th:last-child, .tariff-table td:last-child { text-align: right; }
+.tariff-description { display: block; margin-top: 4px; color: var(--text-muted); font-size: .78rem; }
+.tariff-price { white-space: nowrap; font-weight: 700; }
+.tariff-status { white-space: nowrap; }
+.tariff-status--current { color: var(--success-text); background: var(--success-bg); }
+.tariff-status--scheduled { color: #1d4ed8; background: #dbeafe; }
+.tariff-status--superseded { color: var(--text-muted); background: var(--bg-muted); }
+.tariff-status--inactive { color: #b91c1c; background: #fee2e2; }
+@media (max-width: 1050px) { .tariff-form-grid { grid-template-columns: repeat(2, 1fr); } .tariff-description-field { grid-column: span 2; } }
+@media (max-width: 620px) { .tariff-form-grid { grid-template-columns: 1fr; } .tariff-description-field { grid-column: auto; } }

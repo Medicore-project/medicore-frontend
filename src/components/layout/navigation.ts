@@ -5,6 +5,7 @@ import {
   CalendarIcon,
   CalendarPlusIcon,
   ClockIcon,
+  DocumentIcon,
   GridIcon,
   LayersIcon,
   ListIcon,
@@ -78,11 +79,20 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: 'Billing',
+    items: [
+      { name: 'Service Tariffs', path: '/billing/tariffs', allowedRoles: FRONT_DESK_ROLES, icon: DocumentIcon, description: 'Effective-dated service prices and history' },
+      { name: 'Email Notifications', path: '/billing/notifications', allowedRoles: ['Admin'], icon: DocumentIcon, description: 'Email templates and delivery history' },
+    ],
+  },
+  {
     title: 'Reports',
     items: [
       { name: 'Audit Reports', path: '/reports/audit', allowedRoles: ['Admin'], icon: ShieldIcon, description: 'Who changed what, and when' },
       { name: 'Demographics Report', path: '/reports/demographics', allowedRoles: ['Admin'], icon: PieIcon, description: 'Patient population breakdowns' },
       { name: 'Utilisation Report', path: '/reports/utilisation', allowedRoles: ['Admin'], icon: ActivityIcon, description: 'Doctor workload and no-show rates' },
+      { name: 'Revenue Report', path: '/reports/revenue', allowedRoles: ['Admin'], icon: PieIcon, description: 'Payments by department, method and date' },
+      { name: 'Outstanding Invoices', path: '/reports/outstanding', allowedRoles: ['Admin'], icon: PieIcon, description: 'Unpaid invoices by age and department' },
     ],
   },
 ];
@@ -113,6 +123,7 @@ const DETAIL_TITLES: Array<{ pattern: RegExp; title: string; parent: string }> =
   { pattern: /^\/patients\/[^/]+$/, title: 'Patient profile', parent: 'Patients' },
   { pattern: /^\/staff\/[^/]+$/, title: 'Staff member', parent: 'Staff' },
   { pattern: /^\/appointments\/[^/]+$/, title: 'Appointment', parent: 'Booked Appointments' },
+  { pattern: /^\/billing\/invoices\/[^/]+$/, title: 'Invoice', parent: 'Billing' },
 ];
 
 /**

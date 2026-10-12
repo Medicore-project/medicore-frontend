@@ -9,6 +9,7 @@ import {
   type AppointmentHistoryEntry,
   type AppointmentRecord,
 } from '../api/appointments';
+import { invoiceApi } from '../api/billing';
 import AppointmentHistoryList from '../components/appointments/AppointmentHistoryList';
 import AppointmentTextDialog from '../components/appointments/AppointmentTextDialog';
 import RescheduleDialog from '../components/appointments/RescheduleDialog';
@@ -56,6 +57,7 @@ const AppointmentDetailPage: React.FC = () => {
   const [appointment, setAppointment] = useState<AppointmentRecord | null>(null);
   const [history, setHistory] = useState<AppointmentHistoryEntry[]>([]);
   const [doctorName, setDoctorName] = useState<string | null>(null);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -87,6 +89,15 @@ const AppointmentDetailPage: React.FC = () => {
           if (!cancelled) setDoctorName(doctors.find((d) => d.doctorId === found.doctorId)?.fullName ?? null);
         } catch {
           // Leave the name unknown.
+        }
+
+        // Billing is eventually consistent with the appointment event. A missing invoice should
+        // not make the appointment page fail; the link appears once Billing has created it.
+        try {
+          const invoice = await invoiceApi.getByAppointment(found.appointmentId);
+          if (!cancelled) setInvoiceId(invoice.invoiceId);
+        } catch {
+          // Booking may still be waiting in the outbox/Kafka pipeline.
         }
       } catch (err) {
         if (!cancelled) setError(extractErrorMessage(err, 'Could not load this appointment.'));
@@ -260,6 +271,14 @@ const AppointmentDetailPage: React.FC = () => {
           <span className="detail-label">Booked</span>
           <span className="detail-value">{colomboDateTimeLabel(appointment.createdAt)}</span>
         </div>
+        {invoiceId && canChangeAppointments(user?.role) && (
+          <div className="detail-row">
+            <span className="detail-label">Invoice</span>
+            <span className="detail-value">
+              <Link to={`/billing/invoices/${invoiceId}`}>View invoice and payments</Link>
+            </span>
+          </div>
+        )}
       </section>
 
       <section className="detail-card" aria-label="History">

@@ -40,8 +40,10 @@ import UpcomingAppointments from './UpcomingAppointments';
 import WaitlistJoinCard from './WaitlistJoinCard';
 import YourWaitlist from './YourWaitlist';
 
-/** What the service records when nothing else is chosen. Mirrors ServiceCodes.GeneralConsultation. */
-const DEFAULT_SERVICE_CODE = 'GEN-CONSULT';
+/** Mirrors the backend's doctor-owned consultation classification for immediate UI feedback. */
+function consultationServiceCode(doctor: PublicDoctor | null): string {
+  return doctor?.specialization.trim() ? 'SPEC-CONSULT' : 'GEN-CONSULT';
+}
 
 /** The service's limit on a cancellation reason. */
 const MAX_REASON_LENGTH = 500;
@@ -123,6 +125,7 @@ const BookingFlow: React.FC = () => {
   const [isJoining, setIsJoining] = useState(false);
 
   const selectedDoctor = doctors.find((candidate) => candidate.doctorId === doctorId) ?? null;
+  const selectedServiceCode = consultationServiceCode(selectedDoctor);
 
   // ── Data loading ────────────────────────────────────────────────────────────
 
@@ -367,7 +370,7 @@ const BookingFlow: React.FC = () => {
     setIsSubmitting(true);
     setStepError(null);
     try {
-      const appointment = await appointmentApi.book(selectedSlot.slotId, DEFAULT_SERVICE_CODE);
+      const appointment = await appointmentApi.book(selectedSlot.slotId, selectedServiceCode);
       setStep({ kind: 'booked', appointment, doctor: selectedDoctor });
       setSelectedSlot(null);
       await loadUpcoming();
@@ -428,7 +431,7 @@ const BookingFlow: React.FC = () => {
     setJoinError(null);
     setWaitlistNotice(null);
     try {
-      const entry = await waitlistApi.join({ doctorId, date, serviceCode: DEFAULT_SERVICE_CODE });
+      const entry = await waitlistApi.join({ doctorId, date, serviceCode: selectedServiceCode });
       setWaitlistNotice(
         entry.placeInLine
           ? `You joined the waitlist for ${fullDateLabel(date)} — #${entry.placeInLine} in line.`
@@ -609,7 +612,7 @@ const BookingFlow: React.FC = () => {
               specialization={specialization}
               doctor={step.kind === 'choose' ? selectedDoctor : null}
               slot={selectedSlot}
-              serviceCode={DEFAULT_SERVICE_CODE}
+              serviceCode={selectedServiceCode}
               isSubmitting={isSubmitting}
               onConfirm={() => void handleConfirm()}
             />

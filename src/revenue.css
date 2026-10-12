@@ -1,0 +1,18 @@
+.revenue-page { display: grid; gap: 1.25rem; }
+.revenue-actions, .revenue-filter-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; }
+.revenue-filters { padding: 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 1rem; align-items: end; }
+.revenue-filters label, .revenue-chart-switch label { display: grid; gap: .4rem; font-size: .85rem; font-weight: 600; color: #334155; }
+.revenue-filters input, .revenue-filters select, .revenue-chart-switch select { width: 100%; min-height: 40px; padding: .45rem .65rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; }
+.revenue-period { margin: 0; color: #475569; }
+.revenue-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+.revenue-total { display: grid; gap: .35rem; padding: 1.25rem; }
+.revenue-total span, .revenue-total small { color: #475569; }
+.revenue-total strong { font-size: 1.7rem; color: #16477d; }
+.revenue-chart-switch { max-width: 190px; }
+.revenue-chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.revenue-chart-card { padding: 1.25rem; min-width: 0; }
+.revenue-chart-card h2, .revenue-table-card h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+.revenue-chart { height: 300px; }
+.revenue-table-card { padding: 1.25rem; }
+.revenue-loading, .revenue-empty { padding: 2rem; text-align: center; color: #64748b; }
+@media (max-width: 850px) { .revenue-chart-grid { grid-template-columns: 1fr; } }
