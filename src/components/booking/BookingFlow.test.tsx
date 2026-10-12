@@ -89,7 +89,7 @@ const APPOINTMENT = {
   endUtc: `${tomorrow()}T04:00:00Z`,
   slotDate: tomorrow(),
   durationMinutes: 30,
-  serviceCode: 'SPEC-CONSULT',
+  serviceCode: 'SPEC-NEUROLOGY',
   status: 'Booked',
   createdAt: `${tomorrow()}T00:00:00Z`,
 };
@@ -497,7 +497,7 @@ describe('BookingFlow (SCRUM-34)', () => {
     expect(await screen.findByTestId('booking-confirmation')).toHaveTextContent(
       'Your appointment is confirmed',
     );
-    expect(api.appointment.book).toHaveBeenCalledWith('slot-1', 'SPEC-CONSULT');
+    expect(api.appointment.book).toHaveBeenCalledWith('slot-1', 'SPEC-NEUROLOGY');
     expect(api.identity.publicRegister).not.toHaveBeenCalled();
   });
 
@@ -526,7 +526,7 @@ describe('BookingFlow (SCRUM-34)', () => {
 
     await screen.findByTestId('booking-confirmation');
     expect(screen.getByTestId('billing-notice')).toHaveTextContent('becomes payable');
-    expect(screen.getByTestId('billing-notice')).toHaveTextContent('SPEC-CONSULT');
+    expect(screen.getByTestId('billing-notice')).toHaveTextContent('SPEC-NEUROLOGY');
   });
 
   // ── Registration problems ───────────────────────────────────────────────────
@@ -704,7 +704,7 @@ describe('BookingFlow — the waitlist (SCRUM-37)', () => {
       expect(api.waitlist.join).toHaveBeenCalledWith({
         doctorId: 'doctor-1',
         date: dayAfterTomorrow(),
-        serviceCode: 'SPEC-CONSULT',
+        serviceCode: 'SPEC-NEUROLOGY',
       }),
     );
     const card = await screen.findByTestId('your-waitlist');

@@ -12,7 +12,7 @@ describe('extractErrorMessage', () => {
       title: 'Booking request validation failed.',
       errors: {
         slotId: ['A slot id is required.'],
-        serviceCode: ['Service code must be one of: GEN-CONSULT, SPEC-CONSULT, FOLLOW-UP.'],
+        serviceCode: ['Service code must be GEN-CONSULT or a specialization code such as SPEC-CARDIOLOGY.'],
       },
     });
 

@@ -6,7 +6,6 @@ import NotificationsPage from './NotificationsPage';
 const api = vi.hoisted(() => ({
   listTemplates: vi.fn(),
   listLogs: vi.fn(),
-  createTemplate: vi.fn(),
   updateTemplate: vi.fn(),
   deactivateTemplate: vi.fn(),
 }));
@@ -55,24 +54,32 @@ describe('NotificationsPage (SCRUM-46)', () => {
     expect(screen.getAllByText('Sent').length).toBeGreaterThan(0);
   });
 
-  it('creates a template and refreshes the page', async () => {
-    api.createTemplate.mockResolvedValue({ ...template, code: 'CUSTOM_NOTICE' });
+  it('offers no way to add a template, only to edit the ones the service sends', async () => {
     render(<NotificationsPage />);
     await screen.findByText('Patient welcome');
 
-    fireEvent.click(screen.getByRole('button', { name: '+ Add template' }));
-    fireEvent.change(screen.getByLabelText('Code'), { target: { value: 'custom_notice' } });
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Custom notice' } });
-    fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'A subject' } });
-    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'A body' } });
+    expect(screen.queryByRole('button', { name: /add template/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+  });
+
+  it('edits a template without letting its code change, and refreshes the page', async () => {
+    api.updateTemplate.mockResolvedValue({ ...template, subjectTemplate: 'A new subject' });
+    render(<NotificationsPage />);
+    await screen.findByText('Patient welcome');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByLabelText('Code')).toHaveValue('PATIENT_WELCOME');
+    expect(screen.getByLabelText('Code')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Subject'), { target: { value: '  A new subject  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save template' }));
 
-    await waitFor(() => expect(api.createTemplate).toHaveBeenCalledWith({
-      code: 'CUSTOM_NOTICE',
-      name: 'Custom notice',
-      subjectTemplate: 'A subject',
-      bodyTemplate: 'A body',
+    await waitFor(() => expect(api.updateTemplate).toHaveBeenCalledWith('template-1', {
+      name: 'Patient welcome',
+      subjectTemplate: 'A new subject',
+      bodyTemplate: 'Hello {{patientName}}',
+      isActive: true,
     }));
+    expect(await screen.findByRole('status')).toHaveTextContent('PATIENT_WELCOME was updated.');
     expect(api.listTemplates).toHaveBeenCalledTimes(2);
   });
 });
