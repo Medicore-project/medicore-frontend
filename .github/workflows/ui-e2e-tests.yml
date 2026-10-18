@@ -1,21 +1,23 @@
 # =============================================================================
 # ui-e2e-tests.yml — SE3112 UI / E2E testing (Playwright)
 # =============================================================================
-# ui-tests  Every push and PR. The real app (production bundle) in Chromium, every API call
-#           answered by test doubles — no backend needed. Fails the build on any failure.
+# ui-tests  Every PR to main/develop and every push to develop. On main it is called by the Azure
+#           deploy workflow instead, which deploys only if it passes (so it does not run twice).
+#           The real app (production bundle) in Chromium, every API call answered by test
+#           doubles — no backend needed. Fails the build on any failure.
 # e2e-stack On demand (Actions → Run workflow), or called by the group pipeline. Journeys across
-#           the four microservices against a running stack whose gateway and admin account are
-#           given as inputs/secrets.
+#           the four microservices against a running stack: the frontend (app_url), its gateway
+#           (gateway_url) and an admin account (secrets). Run by hand, it targets the live site.
 #
 # Both publish the HTML report (with traces, screenshots and videos of failures) as an artifact
-# and a JUnit summary on the run page. `workflow_call` lets the group's unified pipeline reuse it.
+# and a JUnit summary on the run page. `workflow_call` lets other workflows reuse it.
 # =============================================================================
 
 name: UI & E2E tests (Playwright)
 
 on:
   push:
-    branches: [main, develop]
+    branches: [develop]
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
@@ -24,15 +26,22 @@ on:
         description: "Also run the full-stack E2E journeys"
         type: boolean
         default: false
+      app_url:
+        description: "Frontend to test (empty = start a dev server in the runner)"
+        type: string
+        default: "https://proud-water-0f2255f00.5.azurestaticapps.net"
       gateway_url:
         description: "Gateway URL of the stack to test"
         type: string
-        default: "http://localhost:5000"
+        default: "https://medicore-gateway.azurewebsites.net"
   workflow_call:
     inputs:
       run_e2e:
         type: boolean
         default: false
+      app_url:
+        type: string
+        default: ""
       gateway_url:
         type: string
         default: "http://localhost:5000"
@@ -46,8 +55,10 @@ permissions:
   contents: read
   checks: write   # the JUnit summary is published as a check run
 
+# github.workflow is the *caller's* name when this file is reused, so the deploy workflow's run
+# and a standalone run on the same branch never cancel each other.
 concurrency:
-  group: ui-e2e-${{ github.ref }}
+  group: ui-e2e-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -111,7 +122,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
+      E2E_APP_URL: ${{ inputs.app_url }}
       E2E_GATEWAY_URL: ${{ inputs.gateway_url }}
+      E2E_EVENTUAL_TIMEOUT_MS: "90000"
       E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
     steps:

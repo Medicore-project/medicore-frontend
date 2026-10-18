@@ -1,7 +1,8 @@
 # =============================================================================
 # azure-static-web-apps.yml — MediCore Frontend CI/CD
 # =============================================================================
-# Builds the React + Vite app and deploys to Azure Static Web Apps.
+# Runs the Playwright UI tests first, then builds the React + Vite app and deploys it to Azure
+# Static Web Apps. If any UI test fails, nothing is deployed.
 #
 # Secrets required (add in GitHub repo Settings → Secrets → Actions):
 #   AZURE_STATIC_WEB_APPS_API_TOKEN  — deploy token from Azure Portal
@@ -18,8 +19,17 @@ env:
   NODE_VERSION: "20.x"
 
 jobs:
+  # Quality gate: the same UI test job that runs on every PR (ui-e2e-tests.yml, reused).
+  ui-tests:
+    name: UI tests
+    uses: ./.github/workflows/ui-e2e-tests.yml
+    permissions:
+      contents: read
+      checks: write   # the reused workflow publishes its JUnit summary as a check run
+
   build_and_deploy:
     name: Build and Deploy
+    needs: ui-tests   # runs only if every UI test passed
     runs-on: ubuntu-latest
 
     steps:

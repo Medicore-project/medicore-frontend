@@ -2,12 +2,17 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 /** Staff patient search (`/patients`). */
 export class PatientSearchPage {
+  readonly form: Locator;
   readonly query: Locator;
   readonly searchButton: Locator;
+  readonly summary: Locator;
 
   constructor(readonly page: Page) {
-    this.query = page.getByLabel('Search patients');
-    this.searchButton = page.getByRole('button', { name: /^search/i });
+    // Scoped to the search form: the workspace header has its own "Search pages (Ctrl K)" button.
+    this.form = page.getByRole('search');
+    this.query = this.form.getByLabel('Search patients');
+    this.searchButton = this.form.getByRole('button', { name: /^search(ing…)?$/i });
+    this.summary = page.getByText(/\d+ patients? (found for|total)/);
   }
 
   async open(): Promise<void> {
@@ -15,9 +20,14 @@ export class PatientSearchPage {
     await expect(this.page.getByRole('heading', { name: 'Patient Search' })).toBeVisible();
   }
 
+  /**
+   * A live search: typing sends the query after a 400 ms pause and disables the button
+   * ("Searching…") until the answer arrives. So wait for the answer instead of clicking.
+   */
   async search(text: string): Promise<void> {
     await this.query.fill(text);
-    await this.searchButton.click();
+    await expect(this.summary).toContainText(text);
+    await expect(this.searchButton).toHaveText('Search');
   }
 
   row(text: string): Locator {

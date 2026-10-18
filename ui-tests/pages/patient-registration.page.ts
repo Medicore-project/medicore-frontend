@@ -39,7 +39,10 @@ export class PatientRegistrationPage {
   }
 
   async fill(details: Partial<PatientDetails>): Promise<void> {
-    for (const [key, value] of Object.entries(details) as Array<[keyof PatientDetails, string]>) {
+    // Walk the form's own fields, not the object's keys: callers may pass extra properties
+    // (the E2E patient carries a `tag`), and those have no label to fill.
+    for (const key of Object.keys(PatientRegistrationPage.LABELS) as Array<keyof PatientDetails>) {
+      const value = details[key];
       if (value === undefined) continue;
       if (key === 'gender') await this.field(key).selectOption(value);
       else await this.field(key).fill(value);

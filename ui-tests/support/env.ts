@@ -18,6 +18,9 @@ if (existsSync(envFile)) process.loadEnvFile(envFile);
 const number = (value: string | undefined, fallback: number) =>
   value && !Number.isNaN(Number(value)) ? Number(value) : fallback;
 
+/** An empty variable counts as unset: CI passes an optional input it was not given as ''. */
+const text = (value: string | undefined) => value || undefined;
+
 const mockAppPort = number(process.env.UI_MOCK_PORT, 5199);
 const stackAppPort = number(process.env.E2E_APP_PORT, 5173);
 
@@ -34,10 +37,10 @@ export const env = {
    * Set E2E_APP_URL to run the journeys against an already-deployed frontend instead of starting
    * one (e.g. a staging Static Web App); otherwise a dev server on :5173 is started.
    */
-  externalAppUrl: process.env.E2E_APP_URL,
-  stackAppUrl: process.env.E2E_APP_URL ?? `http://localhost:${stackAppPort}`,
-  gatewayUrl: process.env.E2E_GATEWAY_URL ?? 'http://localhost:5000',
-  adminEmail: process.env.E2E_ADMIN_EMAIL ?? 'admin@medicore.local',
+  externalAppUrl: text(process.env.E2E_APP_URL),
+  stackAppUrl: text(process.env.E2E_APP_URL) ?? `http://localhost:${stackAppPort}`,
+  gatewayUrl: text(process.env.E2E_GATEWAY_URL) ?? 'http://localhost:5000',
+  adminEmail: text(process.env.E2E_ADMIN_EMAIL) ?? 'admin@medicore.local',
   adminPassword: process.env.E2E_ADMIN_PASSWORD ?? '',
   /** May setup create a doctor schedule when nobody is bookable? Always locally; opt-in when E2E_APP_URL is set. */
   allowProvisioning: process.env.E2E_ALLOW_PROVISIONING === '1',
@@ -50,5 +53,5 @@ export const env = {
   /** What setup learned about the stack (the doctor it provisioned), for the specs. */
   stackContextFile: path.join(root, '.auth', 'stack-context.json'),
 
-  chromiumPath: process.env.PW_CHROMIUM_PATH,
+  chromiumPath: text(process.env.PW_CHROMIUM_PATH),
 } as const;

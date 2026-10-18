@@ -198,10 +198,19 @@ After any run:
 
 ## CI
 
-`.github/workflows/ui-e2e-tests.yml` runs on every push and PR to `main`/`develop`. It type-checks
-the tests, runs the UI layer, publishes a JUnit summary and uploads the HTML report. The E2E job runs
-when started by hand (or by the group pipeline through `workflow_call`, with `run_e2e: true`), using
-the `E2E_ADMIN_EMAIL`/`E2E_ADMIN_PASSWORD` secrets and a gateway URL input.
+`.github/workflows/ui-e2e-tests.yml` runs on every PR to `main`/`develop` and every push to
+`develop`. It type-checks the tests, runs the UI layer, publishes a JUnit summary and uploads the HTML
+report.
+
+**Deploy gate.** On a push to `main`, `azure-static-web-apps.yml` calls the same workflow first
+(`uses: ./.github/workflows/ui-e2e-tests.yml`). Its `build_and_deploy` job `needs` that job, so
+a failing UI test stops the deployment to Azure.
+
+**E2E in CI.** Actions → *UI & E2E tests (Playwright)* → *Run workflow* → tick `run_e2e`. The
+`app_url` and `gateway_url` inputs default to the live Azure site, and the job reads the admin
+account from the repository secrets `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD`. Another workflow
+can reuse it through `workflow_call` with its own `app_url`/`gateway_url`. Leave `app_url` empty to
+start a dev server in the runner instead.
 
 ## Troubleshooting
 
