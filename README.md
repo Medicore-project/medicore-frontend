@@ -14,7 +14,7 @@ The app talks only to the **API gateway** of the [`medicore-backend`](../medicor
 - **Recharts** for dashboard and report charts
 - **Plain CSS**, with no UI library and no Tailwind
 - **Vitest** + Testing Library + jsdom for tests, and **oxlint** for linting
-- Selenium end-to-end tests in a separate package under [`e2e/`](e2e/README.md)
+- **Playwright UI and E2E tests** in a separate package under [`ui-tests/`](ui-tests/README.md) (the older Selenium suite in `e2e/` is superseded)
 
 ## Features
 
@@ -84,7 +84,13 @@ npx vitest run src/api/demographicsReports.test.ts   # one file
 npx vitest run -t "renders the summary"              # tests whose name matches
 ```
 
-End-to-end tests drive a real Chrome against a running stack and book real appointments. Read [`e2e/README.md`](e2e/README.md) before running them.
+UI and end-to-end tests live in [`ui-tests/`](ui-tests/README.md), a separate Playwright package:
+
+```bash
+cd ui-tests && npm install && npx playwright install chromium
+npm run test:ui    # UI layer: real browser, API test doubles, no backend needed
+npm run test:e2e   # E2E layer: journeys across the four microservices (needs the docker stack)
+```
 
 ---
 
@@ -109,7 +115,8 @@ src/
   test/setup.ts          Vitest setup
 public/
   staticwebapp.config.json   Azure Static Web Apps routing fallback and security headers
-e2e/                     Selenium tests, a separate npm package
+ui-tests/                Playwright UI + E2E tests, a separate npm package
+e2e/                     older Selenium tests (superseded by ui-tests/)
 ```
 
 ## Conventions
