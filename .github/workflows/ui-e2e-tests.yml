@@ -1,0 +1,165 @@
+# =============================================================================
+# ui-e2e-tests.yml — SE3112 UI / E2E testing (Playwright)
+# =============================================================================
+# ui-tests  Every PR to main/develop and every push to develop. On main it is called by the Azure
+#           deploy workflow instead, which deploys only if it passes (so it does not run twice).
+#           The real app (production bundle) in Chromium, every API call answered by test
+#           doubles — no backend needed. Fails the build on any failure.
+# e2e-stack On demand (Actions → Run workflow), or called by the group pipeline. Journeys across
+#           the four microservices against a running stack: the frontend (app_url), its gateway
+#           (gateway_url) and an admin account (secrets). Run by hand, it targets the live site.
+#
+# Both publish the HTML report (with traces, screenshots and videos of failures) as an artifact
+# and a JUnit summary on the run page. `workflow_call` lets other workflows reuse it.
+# =============================================================================
+
+name: UI & E2E tests (Playwright)
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      run_e2e:
+        description: "Also run the full-stack E2E journeys"
+        type: boolean
+        default: false
+      app_url:
+        description: "Frontend to test (empty = start a dev server in the runner)"
+        type: string
+        default: "https://proud-water-0f2255f00.5.azurestaticapps.net"
+      gateway_url:
+        description: "Gateway URL of the stack to test"
+        type: string
+        default: "https://medicore-gateway.azurewebsites.net"
+  workflow_call:
+    inputs:
+      run_e2e:
+        type: boolean
+        default: false
+      app_url:
+        type: string
+        default: ""
+      gateway_url:
+        type: string
+        default: "http://localhost:5000"
+    secrets:
+      E2E_ADMIN_EMAIL:
+        required: false
+      E2E_ADMIN_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+  checks: write   # the JUnit summary is published as a check run
+
+# github.workflow is the *caller's* name when this file is reused, so the deploy workflow's run
+# and a standalone run on the same branch never cancel each other.
+concurrency:
+  group: ui-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20.x"
+
+jobs:
+  ui-tests:
+    name: UI tests (API test doubles)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui-tests/package-lock.json
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Install test dependencies
+        working-directory: ui-tests
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: ui-tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Type-check the test code
+        working-directory: ui-tests
+        run: npm run typecheck
+
+      - name: Run UI tests
+        working-directory: ui-tests
+        run: npm run test:ui
+
+      - name: Publish test summary
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: ui-tests/reports/junit/results.xml
+          check_name: UI test results
+          detailed_summary: true
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-ui-report
+          path: ui-tests/reports/
+          retention-days: 14
+
+  e2e-stack:
+    name: E2E journeys (live microservices)
+    if: ${{ inputs.run_e2e }}
+    needs: ui-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_APP_URL: ${{ inputs.app_url }}
+      E2E_GATEWAY_URL: ${{ inputs.gateway_url }}
+      E2E_EVENTUAL_TIMEOUT_MS: "90000"
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui-tests/package-lock.json
+
+      - run: npm ci
+      - run: npm ci
+        working-directory: ui-tests
+      - run: npx playwright install --with-deps chromium
+        working-directory: ui-tests
+
+      - name: Run E2E journeys
+        working-directory: ui-tests
+        run: npm run test:e2e
+
+      - name: Publish test summary
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: ui-tests/reports/junit/results.xml
+          check_name: E2E test results
+          detailed_summary: true
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-report
+          path: ui-tests/reports/
+          retention-days: 14
