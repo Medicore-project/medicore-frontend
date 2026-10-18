@@ -8,7 +8,7 @@ produce one report:
 | Layer | Project | What runs | Backend | When |
 |---|---|---|---|---|
 | **UI tests** | `ui-chromium` (+ `ui-firefox`, `ui-webkit`) | The real app (production bundle) in a real browser. Every gateway call is answered by a **test double** | None | Every push / PR (CI), and constantly while developing |
-| **E2E tests** | `e2e-stack` (after `e2e-setup`) | The same app against the **real gateway**, driving journeys across Identity → Patient → Appointment → Kafka → Billing | Docker stack | Before a release, in the demo, on demand in CI |
+| **E2E tests** | `e2e-stack` (after `e2e-setup`) | The same app against the **real gateway**, driving journeys across Identity → Patient → Appointment → Kafka → Billing | Docker stack, or the live Azure deployment | Before a release, in the demo, on demand in CI |
 
 ```
                  ┌──────────────── Playwright test runner ────────────────┐
@@ -23,6 +23,9 @@ produce one report:
 
 The mocked app is built with a gateway URL that does not exist (`mock-gateway.medicore.test`), so a call
 a test forgot to double fails loudly instead of quietly reaching a real backend.
+
+Against the live Azure deployment, the E2E layer skips the local dev server and drives the deployed
+Static Web App, which calls the Azure gateway (see "Against the live Azure deployment").
 
 ---
 
@@ -58,7 +61,7 @@ npx playwright install chromium        # add firefox webkit for cross-browser ru
 ### UI layer — no backend needed
 
 ```bash
-npm run test:ui                # headless, ~30 s on a laptop
+npm run test:ui                # headless, ~2 min on a laptop (4 workers)
 npm run test:ui:headed         # watch the browser
 npm run test:ui:cross-browser  # Chromium + Firefox + WebKit
 npm run report                 # open the HTML report
@@ -101,7 +104,7 @@ changes a doctor's schedule unless `E2E_ALLOW_PROVISIONING=1` is set.
 
 | Variable | Default | Used by |
 |---|---|---|
-| `E2E_ADMIN_EMAIL` | `admin@medicore.local` | E2E |
+| `E2E_ADMIN_EMAIL` | `admin@medicore.com` | E2E |
 | `E2E_ADMIN_PASSWORD` | — (required) | E2E |
 | `E2E_GATEWAY_URL` | `http://localhost:5000` | E2E |
 | `E2E_APP_URL` | unset → dev server on `:5173` | E2E: test a deployed frontend instead |
