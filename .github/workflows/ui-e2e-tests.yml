@@ -10,7 +10,8 @@
 #           (gateway_url) and an admin account (secrets). Run by hand, it targets the live site.
 #
 # Both publish the HTML report (with traces, screenshots and videos of failures) as an artifact
-# and a JUnit summary on the run page. `workflow_call` lets other workflows reuse it.
+# and a JUnit summary on the run page. `workflow_call` lets other workflows reuse it — including
+# the group pipeline in the backend repo, which is why checkout names this repo explicitly.
 # =============================================================================
 
 name: UI & E2E tests (Playwright)
@@ -71,6 +72,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          # When the backend's group pipeline calls this workflow, checkout would default to the
+          # backend repo. Always check out the frontend: this commit when run here, main otherwise.
+          repository: Medicore-project/medicore-frontend
+          ref: ${{ github.repository == 'Medicore-project/medicore-frontend' && github.sha || 'main' }}
 
       - uses: actions/setup-node@v4
         with:
@@ -129,6 +135,9 @@ jobs:
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: Medicore-project/medicore-frontend
+          ref: ${{ github.repository == 'Medicore-project/medicore-frontend' && github.sha || 'main' }}
 
       - uses: actions/setup-node@v4
         with:
